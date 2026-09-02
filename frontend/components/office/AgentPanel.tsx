@@ -22,6 +22,21 @@ function validChatMessages(value: unknown): AgentChatMessage[] {
   }).slice(-30);
 }
 
+const chatKey = (id: AgentId) => `acf-agent-chat-${id}`;
+const pendingKey = (id: AgentId) => `acf-agent-pending-${id}`;
+
+function readStoredMessages(id: AgentId): AgentChatMessage[] {
+  try {
+    return validChatMessages(JSON.parse(localStorage.getItem(chatKey(id)) || "[]"));
+  } catch {
+    return [];
+  }
+}
+
+function notifyChatUpdate(id: AgentId) {
+  window.dispatchEvent(new CustomEvent("acf-agent-chat-update", { detail: { id } }));
+}
+
 function fmtElapsed(s: number | null) {
   if (s == null) return "-";
   const m = Math.floor(s / 60);
@@ -46,17 +61,27 @@ export function AgentPanel({
   const [messages, setMessages] = useState<AgentChatMessage[]>([]);
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
+  const [answerProgress, setAnswerProgress] = useState<number | null>(null);
   const [chatError, setChatError] = useState("");
   const [chatMeta, setChatMeta] = useState<{ provider: string; model: string; mock: boolean } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
+  const progressResetRef = useRef<number | null>(null);
 
   useEffect(() => {
     const greeting: AgentChatMessage = { role: "assistant", content: `안녕하세요. ${agent.role}입니다. 무엇을 도와드릴까요?` };
     try {
-      const saved = localStorage.getItem(`acf-agent-chat-${id}`);
+      const saved = localStorage.getItem(chatKey(id));
       const parsed = saved ? JSON.parse(saved) : null;
       const restored = validChatMessages(parsed);
       setMessages(restored.length ? restored : [greeting]);
+      const pending = Number(localStorage.getItem(pendingKey(id)) || 0);
+      if (pending > 0) {
+        setSending(true);
+        setAnswerProgress(Math.min(92, 8 + Math.floor((Date.now() - pending) / 420) * 3));
+      } else {
+        setSending(false);
+        setAnswerProgress(null);
+      }
     } catch {
       setMessages([greeting]);
     }
@@ -64,6 +89,21 @@ export function AgentPanel({
     setChatError("");
     setChatMeta(null);
   }, [id, agent.role]);
+
+  useEffect(() => {
+    const refresh = (event: Event) => {
+      const detail = (event as CustomEvent<{ id?: AgentId }>).detail;
+      if (detail?.id !== id) return;
+      const restored = readStoredMessages(id);
+      if (restored.length) setMessages(restored);
+      const pending = Number(localStorage.getItem(pendingKey(id)) || 0);
+      setSending(pending > 0);
+      setAnswerProgress(pending > 0 ? 92 : 100);
+      if (!pending) progressResetRef.current = window.setTimeout(() => setAnswerProgress(null), 700);
+    };
+    window.addEventListener("acf-agent-chat-update", refresh);
+    return () => window.removeEventListener("acf-agent-chat-update", refresh);
+  }, [id]);
 
   useEffect(() => {
     const node = endRef.current;
@@ -74,11 +114,28 @@ export function AgentPanel({
 
   useEffect(() => {
     try {
-      if (messages.length) localStorage.setItem(`acf-agent-chat-${id}`, JSON.stringify(messages.slice(-30)));
+      if (messages.length) localStorage.setItem(chatKey(id), JSON.stringify(messages.slice(-30)));
     } catch {
       // Private browsing/storage restrictions must never crash the office UI.
     }
   }, [id, messages]);
+
+  useEffect(() => {
+    if (!sending) return;
+    const timer = window.setInterval(() => {
+      setAnswerProgress((current) => {
+        const value = current ?? 8;
+        if (value >= 92) return 92;
+        const step = value < 45 ? 7 : value < 75 ? 4 : 2;
+        return Math.min(92, value + step);
+      });
+    }, 420);
+    return () => window.clearInterval(timer);
+  }, [sending]);
+
+  useEffect(() => () => {
+    if (progressResetRef.current !== null) window.clearTimeout(progressResetRef.current);
+  }, []);
 
   async function sendText(text: string) {
     text = text.trim();
@@ -87,6 +144,14 @@ export function AgentPanel({
     setMessages(next);
     setDraft("");
     setSending(true);
+    if (progressResetRef.current !== null) window.clearTimeout(progressResetRef.current);
+    setAnswerProgress(8);
+    try {
+      localStorage.setItem(chatKey(id), JSON.stringify(next.slice(-30)));
+      localStorage.setItem(pendingKey(id), String(Date.now()));
+    } catch {
+      // The request can still run in memory when storage is unavailable.
+    }
     setChatError("");
     try {
       const result = await chatWithAgent(id, text, next.slice(0, -1), {
@@ -95,12 +160,30 @@ export function AgentPanel({
         mode: j.mode,
         campaign_id: j.campaignId,
       });
-      setMessages((rows) => [...rows, { role: "assistant", content: result.reply }]);
+      const reply: AgentChatMessage = { role: "assistant", content: result.reply };
+      const latest = readStoredMessages(id);
+      const completed = [...(latest.length ? latest : next), reply].slice(-30);
+      try {
+        localStorage.setItem(chatKey(id), JSON.stringify(completed));
+        localStorage.removeItem(pendingKey(id));
+      } catch {
+        // Keep the in-memory result when browser storage is unavailable.
+      }
+      setMessages(completed);
       setChatMeta({ provider: result.provider, model: result.model, mock: result.mock });
+      setAnswerProgress(100);
+      notifyChatUpdate(id);
     } catch {
       setChatError("AI와 연결하지 못했습니다. 백엔드와 AI 설정을 확인해 주세요.");
+      try {
+        localStorage.removeItem(pendingKey(id));
+      } catch {
+        // Ignore storage restrictions.
+      }
+      notifyChatUpdate(id);
     } finally {
       setSending(false);
+      progressResetRef.current = window.setTimeout(() => setAnswerProgress(null), 700);
     }
   }
 
@@ -113,8 +196,10 @@ export function AgentPanel({
     const greeting: AgentChatMessage = { role: "assistant", content: `새 대화를 시작합니다. ${agent.role}에게 무엇이든 물어보세요.` };
     setMessages([greeting]);
     setChatMeta(null);
+    setAnswerProgress(null);
     try {
-      localStorage.removeItem(`acf-agent-chat-${id}`);
+      localStorage.removeItem(chatKey(id));
+      localStorage.removeItem(pendingKey(id));
     } catch {
       // The in-memory conversation is still reset when browser storage is unavailable.
     }
@@ -183,6 +268,20 @@ export function AgentPanel({
           {sending && <p className="text-[12px] text-ink-tertiary">답변을 작성하고 있습니다…</p>}
           <div ref={endRef} />
         </div>
+        {answerProgress !== null && (
+          <div className="mt-2" role="status" aria-live="polite" aria-label={`응답 준비 ${answerProgress}%`}>
+            <div className="mb-1 flex items-center justify-between text-[12px] text-ink-subtle">
+              <span>{answerProgress === 100 ? "답변 완료" : "응답 준비 중"}</span>
+              <span className="font-mono font-semibold text-primary">{answerProgress}%</span>
+            </div>
+            <div className="h-2 overflow-hidden rounded-full bg-primary/10">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[#ef9fc6] via-[#d77bab] to-primary transition-[width] duration-300 ease-out"
+                style={{ width: `${answerProgress}%` }}
+              />
+            </div>
+          </div>
+        )}
         {chatError && <p className="mt-1.5 text-[12px] text-red-600">{chatError}</p>}
         {chatMeta && (
           <p className="mt-1.5 text-[11px] text-ink-tertiary">
