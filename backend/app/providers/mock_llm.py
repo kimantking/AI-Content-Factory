@@ -44,6 +44,11 @@ class MockLLMProvider:
 
     # --- task handlers -------------------------------------------------------
 
+    def _task_agent_chat(self, ctx: dict) -> dict:
+        role = ctx.get("agent_role", "콘텐츠 전문가")
+        message = ctx.get("message", "")
+        return {"reply": f"저는 {role}입니다. ‘{message[:80]}’ 요청을 확인했습니다. 현재는 모의 AI 모드이므로 실제 분석을 사용하려면 Ollama 또는 클라우드 AI를 연결해 주세요."}
+
     def _task_research(self, ctx: dict) -> dict:
         topic = ctx.get("topic", "the topic")
         sources = ctx.get("sources", [])

@@ -9,6 +9,13 @@ const POSITIONS: Record<AgentId, { left: string; top: string; delay: string }> =
   publish: { left: "83%", top: "64%", delay: "-1.9s" },
 };
 
+const PORTRAITS: Record<AgentId, string> = {
+  research: "/agent-research.webp",
+  script: "/agent-script.webp",
+  video: "/agent-video.webp",
+  publish: "/agent-publish.webp",
+};
+
 export function RealisticOffice({
   model,
   selected,
@@ -53,7 +60,7 @@ export function RealisticOffice({
                 className="absolute inset-1 rounded-full blur-xl"
                 style={{ background: meta.hex, opacity: active ? 0.62 : 0.2 }}
               />
-              <img src="/studio-agent-chibi.webp" alt="" className="relative block w-full drop-shadow-[0_8px_8px_rgba(30,12,24,.38)] [image-rendering:pixelated]" draggable={false} />
+              <img src={PORTRAITS[agent.id]} alt="" className="relative block w-full drop-shadow-[0_10px_10px_rgba(30,12,24,.34)]" draggable={false} />
               <span
                 className="absolute right-0 top-0 h-3 w-3 rounded-full border-2 border-white shadow"
                 style={{ background: meta.hex }}

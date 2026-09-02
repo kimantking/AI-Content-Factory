@@ -14,6 +14,19 @@ def test_local_ai_status_never_500(_base_settings):
     assert r.status_code == 200 and r.json()["status"] == "DISABLED"
 
 
+def test_agent_chat_works_in_mock_mode(_base_settings):
+    _base_settings.ollama_enabled = False
+    r = client.post("/api/agents/research/chat", json={"message": "이번 주제를 어떻게 조사할까요?", "history": []})
+    assert r.status_code == 200
+    body = r.json()
+    assert body["reply"] and body["agent_id"] == "research" and body["mock"] is True
+
+
+def test_agent_chat_rejects_unknown_agent(_base_settings):
+    r = client.post("/api/agents/unknown/chat", json={"message": "안녕"})
+    assert r.status_code == 404
+
+
 def test_local_ai_status_reports_not_running_when_unreachable(_base_settings):
     _base_settings.ollama_enabled = True
     _base_settings.ollama_base_url = "http://127.0.0.1:59998"

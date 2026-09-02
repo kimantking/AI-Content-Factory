@@ -1,6 +1,18 @@
 export const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE ?? "http://localhost:8000";
 
+export type AgentChatMessage = { role: "user" | "assistant"; content: string };
+
+export async function chatWithAgent(agentId: string, message: string, history: AgentChatMessage[]) {
+  const r = await fetch(`${API_BASE}/api/agents/${agentId}/chat`, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ message, history }),
+  });
+  if (!r.ok) throw new Error(`agent chat failed: ${r.status}`);
+  return r.json() as Promise<{ reply: string; provider: string; model: string; mock: boolean }>;
+}
+
 export type StepStatus = { name: string; status: string };
 
 export type CampaignDetail = {

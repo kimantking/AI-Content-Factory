@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.ai_router.benchmark import run_benchmark
 from app.ai_router.cost import estimate_campaign_cost
+from app.ai_router.execute import run_routed
 from app.ai_router.registry import get_registry, reset_registry_cache
 from app.ai_router.router import ModelRouter
 from app.ai_router.telemetry import performance_hint, recompute_performance
@@ -14,6 +15,47 @@ from app.db.base import get_db
 from app.db.models_p8 import ModelPerformance, ModelRoutingEvent
 
 router = APIRouter(prefix="/api", tags=["ai"])
+
+_AGENT_CHAT = {
+    "research": ("Research Agent", "reference_analysis", "리서치 전문가", "근거와 출처 중심으로 조사 방향과 팩트를 설명합니다."),
+    "script": ("Script Agent", "final_script", "대본 전문가", "훅, 흐름, 말투와 대본 개선안을 구체적으로 제안합니다."),
+    "video": ("Video Director", "creative_direction", "영상 전문가", "장면, 촬영, 편집, 자막과 시청 유지 전략을 설명합니다."),
+    "publish": ("Platform Adapter", "platform_adapt", "게시 전문가", "플랫폼별 게시 방식, 제목, 설명과 업로드 전략을 설명합니다."),
+}
+
+
+@router.post("/agents/{agent_id}/chat")
+def agent_chat(agent_id: str, payload: dict = Body(...), db: Session = Depends(get_db)):
+    if agent_id not in _AGENT_CHAT:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=404, detail="unknown agent")
+    message = str(payload.get("message") or "").strip()
+    if not message:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=422, detail="message is required")
+    message = message[:4000]
+    history = payload.get("history") if isinstance(payload.get("history"), list) else []
+    safe_history = [
+        {"role": str(row.get("role", ""))[:16], "content": str(row.get("content", ""))[:2000]}
+        for row in history[-10:] if isinstance(row, dict)
+    ]
+    agent_type, task_type, ko_role, specialty = _AGENT_CHAT[agent_id]
+    system = (
+        f"당신은 AI Content Factory의 {ko_role}입니다. {specialty} "
+        "사용자에게 한국어로 친절하고 간결하게 답하세요. 모르는 사실을 꾸며내지 말고, "
+        "실행 가능한 다음 행동을 우선 제안하세요. 반드시 JSON 객체 {\"reply\": \"답변\"} 형식으로만 응답하세요."
+    )
+    result = run_routed(
+        db, agent_type=agent_type, task_type=task_type, provider_task="agent_chat",
+        system=system, user=message,
+        context={"message": message, "history": safe_history, "agent_role": ko_role, "max_tokens": 700},
+        complexity="normal", latency_need="low")
+    db.commit()
+    reply = result.data.get("reply") or result.data.get("text") or result.text
+    if not reply:
+        reply = "현재 연결된 AI 모델이 없습니다. 설정에서 Ollama 또는 클라우드 AI를 연결한 뒤 다시 말씀해 주세요."
+    return {"reply": str(reply), "agent_id": agent_id, "provider": result.provider,
+            "model": result.model_id, "mock": result.provider == "mock", "error": result.error}
 
 
 @router.get("/local-ai/status")
