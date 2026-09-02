@@ -39,16 +39,26 @@ def agent_chat(agent_id: str, payload: dict = Body(...), db: Session = Depends(g
         {"role": str(row.get("role", ""))[:16], "content": str(row.get("content", ""))[:2000]}
         for row in history[-10:] if isinstance(row, dict)
     ]
+    raw_context = payload.get("campaign_context")
+    campaign_context = raw_context if isinstance(raw_context, dict) else {}
+    campaign_context = {
+        "topic": str(campaign_context.get("topic") or "")[:500],
+        "stage": str(campaign_context.get("stage") or "")[:120],
+        "mode": str(campaign_context.get("mode") or "")[:120],
+        "campaign_id": str(campaign_context.get("campaign_id") or "")[:120],
+    }
     agent_type, task_type, ko_role, specialty = _AGENT_CHAT[agent_id]
     system = (
         f"당신은 AI Content Factory의 {ko_role}입니다. {specialty} "
         "사용자에게 한국어로 친절하고 간결하게 답하세요. 모르는 사실을 꾸며내지 말고, "
-        "실행 가능한 다음 행동을 우선 제안하세요. 반드시 JSON 객체 {\"reply\": \"답변\"} 형식으로만 응답하세요."
+        "실행 가능한 다음 행동을 우선 제안하세요. 현재 캠페인 정보가 있으면 그 정보를 우선 반영하세요. "
+        "반드시 JSON 객체 {\"reply\": \"답변\"} 형식으로만 응답하세요."
     )
     result = run_routed(
         db, agent_type=agent_type, task_type=task_type, provider_task="agent_chat",
-        system=system, user=message,
-        context={"message": message, "history": safe_history, "agent_role": ko_role, "max_tokens": 700},
+        system=system, user=(f"현재 캠페인: {campaign_context}\n최근 대화: {safe_history}\n사용자 질문: {message}"),
+        context={"message": message, "history": safe_history, "campaign_context": campaign_context,
+                 "agent_role": ko_role, "max_tokens": 700},
         complexity="normal", latency_need="low")
     db.commit()
     reply = result.data.get("reply") or result.data.get("text") or result.text

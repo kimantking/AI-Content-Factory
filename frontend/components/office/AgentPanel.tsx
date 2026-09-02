@@ -6,6 +6,13 @@ import { AGENTS, STATE_META, type AgentId, type OfficeModel } from "./office-dat
 import { Icon } from "@/components/ui/Icon";
 import { chatWithAgent, type AgentChatMessage } from "@/lib/api";
 
+const QUICK_QUESTIONS: Record<AgentId, string[]> = {
+  research: ["지금 무엇을 조사해야 해?", "확인해야 할 출처를 정리해줘"],
+  script: ["대본의 첫 문장을 추천해줘", "더 자연스러운 말투로 만드는 법은?"],
+  video: ["영상 장면 구성을 추천해줘", "초반 이탈을 줄이는 방법은?"],
+  publish: ["플랫폼별 제목을 추천해줘", "언제 게시하는 게 좋아?"],
+};
+
 function fmtElapsed(s: number | null) {
   if (s == null) return "-";
   const m = Math.floor(s / 60);
@@ -31,19 +38,31 @@ export function AgentPanel({
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
   const [chatError, setChatError] = useState("");
+  const [chatMeta, setChatMeta] = useState<{ provider: string; model: string; mock: boolean } | null>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setMessages([{ role: "assistant", content: `안녕하세요. ${agent.role}입니다. 무엇을 도와드릴까요?` }]);
+    const greeting: AgentChatMessage = { role: "assistant", content: `안녕하세요. ${agent.role}입니다. 무엇을 도와드릴까요?` };
+    try {
+      const saved = localStorage.getItem(`acf-agent-chat-${id}`);
+      const parsed = saved ? JSON.parse(saved) : null;
+      setMessages(Array.isArray(parsed) && parsed.length ? parsed.slice(-30) : [greeting]);
+    } catch {
+      setMessages([greeting]);
+    }
     setDraft("");
     setChatError("");
+    setChatMeta(null);
   }, [id, agent.role]);
 
   useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
 
-  async function sendMessage(e: FormEvent) {
-    e.preventDefault();
-    const text = draft.trim();
+  useEffect(() => {
+    if (messages.length) localStorage.setItem(`acf-agent-chat-${id}`, JSON.stringify(messages.slice(-30)));
+  }, [id, messages]);
+
+  async function sendText(text: string) {
+    text = text.trim();
     if (!text || sending) return;
     const next = [...messages, { role: "user", content: text } as AgentChatMessage];
     setMessages(next);
@@ -51,13 +70,31 @@ export function AgentPanel({
     setSending(true);
     setChatError("");
     try {
-      const result = await chatWithAgent(id, text, next.slice(0, -1));
+      const result = await chatWithAgent(id, text, next.slice(0, -1), {
+        topic: j.topic,
+        stage: j.stage,
+        mode: j.mode,
+        campaign_id: j.campaignId,
+      });
       setMessages((rows) => [...rows, { role: "assistant", content: result.reply }]);
+      setChatMeta({ provider: result.provider, model: result.model, mock: result.mock });
     } catch {
       setChatError("AI와 연결하지 못했습니다. 백엔드와 AI 설정을 확인해 주세요.");
     } finally {
       setSending(false);
     }
+  }
+
+  async function sendMessage(e: FormEvent) {
+    e.preventDefault();
+    await sendText(draft);
+  }
+
+  function clearChat() {
+    const greeting: AgentChatMessage = { role: "assistant", content: `새 대화를 시작합니다. ${agent.role}에게 무엇이든 물어보세요.` };
+    setMessages([greeting]);
+    setChatMeta(null);
+    localStorage.removeItem(`acf-agent-chat-${id}`);
   }
 
   return (
@@ -101,7 +138,17 @@ export function AgentPanel({
       )}
 
       <div className="border-t border-hairline pt-3">
-        <p className="mb-2 text-body-sm font-semibold text-ink">에이전트와 대화</p>
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <p className="text-body-sm font-semibold text-ink">에이전트와 대화</p>
+          <button type="button" onClick={clearChat} className="text-[12px] text-ink-tertiary hover:text-primary">대화 초기화</button>
+        </div>
+        <div className="mb-2 flex flex-wrap gap-1.5">
+          {QUICK_QUESTIONS[id].map((question) => (
+            <button key={question} type="button" onClick={() => sendText(question)} disabled={sending} className="rounded-md border border-primary/25 bg-primary/5 px-2 py-1 text-left text-[12px] text-ink-subtle hover:bg-primary/10 disabled:opacity-50">
+              {question}
+            </button>
+          ))}
+        </div>
         <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg bg-white/55 p-2.5">
           {messages.map((message, index) => (
             <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
@@ -114,6 +161,11 @@ export function AgentPanel({
           <div ref={endRef} />
         </div>
         {chatError && <p className="mt-1.5 text-[12px] text-red-600">{chatError}</p>}
+        {chatMeta && (
+          <p className="mt-1.5 text-[11px] text-ink-tertiary">
+            {chatMeta.mock ? "모의 AI" : chatMeta.provider || "AI"} · {chatMeta.model || "모델 확인 중"}
+          </p>
+        )}
         <form onSubmit={sendMessage} className="mt-2 flex gap-2">
           <input value={draft} onChange={(e) => setDraft(e.target.value)} className="input min-w-0 flex-1 !bg-white/80" placeholder="업무에 대해 질문하세요" maxLength={4000} />
           <button type="submit" className="btn btn-primary !px-3" disabled={sending || !draft.trim()} aria-label="메시지 보내기">

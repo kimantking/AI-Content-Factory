@@ -3,11 +3,16 @@ export const API_BASE =
 
 export type AgentChatMessage = { role: "user" | "assistant"; content: string };
 
-export async function chatWithAgent(agentId: string, message: string, history: AgentChatMessage[]) {
+export async function chatWithAgent(
+  agentId: string,
+  message: string,
+  history: AgentChatMessage[],
+  campaignContext?: Record<string, unknown>,
+) {
   const r = await fetch(`${API_BASE}/api/agents/${agentId}/chat`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ message, history }),
+    body: JSON.stringify({ message, history, campaign_context: campaignContext }),
   });
   if (!r.ok) throw new Error(`agent chat failed: ${r.status}`);
   return r.json() as Promise<{ reply: string; provider: string; model: string; mock: boolean }>;
