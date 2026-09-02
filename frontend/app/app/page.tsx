@@ -197,17 +197,22 @@ export default function Home() {
         : "-";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       {/* ---------------------------------------------- Quick Create Composer */}
       <section aria-labelledby="composer-h">
-        <div className="mb-4 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-          <h1
-            id="composer-h"
-            className="font-display text-[21px] font-semibold tracking-[-0.5px] text-ink sm:text-[26px] sm:tracking-[-0.8px]"
-          >
-            오늘 무엇을 만들까요?
-          </h1>
-          {modeLabel && <span className="hidden font-mono text-caption text-ink-tertiary sm:inline">{modeLabel}</span>}
+        <div className="mb-5 border-b border-hairline pb-5">
+          <div className="mb-3 flex items-center justify-between font-mono text-[11px] uppercase tracking-[0.18em] text-ink-tertiary">
+            <span>Creative operations / 001</span>
+            <span>{modeLabel || "STUDIO ONLINE"}</span>
+          </div>
+          <div className="flex items-end justify-between gap-6">
+            <h1 id="composer-h" className="font-display text-[clamp(42px,7vw,104px)] font-bold uppercase leading-[0.82] tracking-[-0.065em] text-ink">
+              Content<br /><span className="text-primary">Factory®</span>
+            </h1>
+            <p className="hidden max-w-[310px] pb-1 text-right text-body leading-snug text-ink-subtle md:block">
+              리서치부터 영상·게시·학습까지.<br />오늘의 제작 지시를 입력하세요.
+            </p>
+          </div>
         </div>
 
         <div className="panel overflow-hidden">
@@ -216,17 +221,17 @@ export default function Home() {
               <Icon name="sparkles" size={15} />
             </span>
             <div className="min-w-0 flex-1">
-              <label htmlFor="topic" className="text-caption font-medium text-ink-subtle">
-                AI에게 만들 콘텐츠를 말하세요
+              <label htmlFor="topic" className="font-mono text-caption font-medium uppercase tracking-[0.12em] text-ink-subtle">
+                Creative brief
               </label>
               <input
                 id="topic"
                 value={topic}
                 onChange={(e) => setTopic(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && start()}
-                placeholder="예: AI 규제 뉴스를 60초 YouTube Shorts로"
+                placeholder="어떤 콘텐츠를 제작할까요?"
                 autoComplete="off"
-                className="mt-1 w-full rounded-md bg-transparent font-display text-[19px] tracking-[-0.3px] text-ink outline-none placeholder:text-ink-tertiary focus-visible:ring-2 focus-visible:ring-primary-focus/50 sm:text-[21px]"
+                className="mt-2 w-full rounded-sm bg-transparent font-display text-[22px] font-medium tracking-[-0.04em] text-ink outline-none placeholder:text-ink-tertiary focus-visible:ring-2 focus-visible:ring-primary-focus/50 sm:text-[30px]"
               />
             </div>
           </div>
@@ -432,9 +437,9 @@ export default function Home() {
           ];
           return tiles.map((t, i) => (
             <div key={t.label} className={i === 0 ? "card-hero" : "card"}>
-              <div className="p-4">
-                <p className="text-caption text-ink-subtle">{t.label}</p>
-                <p className="mt-1.5 font-display text-[24px] font-semibold leading-none tracking-[-0.6px] text-ink tabular-nums">
+              <div className="min-h-[154px] p-5">
+                <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-ink-subtle">0{i + 1} / {t.label}</p>
+                <p className="mt-7 font-display text-[36px] font-semibold leading-none tracking-[-0.05em] text-ink tabular-nums">
                   {snap === null && t.label !== "오늘 순이익" ? <span className="text-ink-tertiary">…</span> : t.value}
                 </p>
                 {t.pct != null && (

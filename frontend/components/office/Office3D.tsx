@@ -8,15 +8,15 @@ import * as THREE from "three";
 import { Workstation } from "./Workstation";
 import { AGENTS, type AgentId, type OfficeModel } from "./office-data";
 
-const SPACING_X = 3.1;
-const SPACING_Z = 2.7;
+const SPACING_X = 3.35;
+const SPACING_Z = 2.8;
 
 function slotToPos([col, row]: [number, number]): [number, number, number] {
   return [(col - 0.5) * SPACING_X, 0, (row - 0.5) * SPACING_Z];
 }
 
-const OVERVIEW = new Vector3(5.6, 4.7, 5.9);
-const OVERVIEW_TARGET = new Vector3(0, 0.62, 0);
+const OVERVIEW = new Vector3(6.8, 4.35, 7.4);
+const OVERVIEW_TARGET = new Vector3(0, 0.72, -0.2);
 
 function CameraRig({ selected }: { selected: AgentId | null }) {
   const { camera, pointer } = useThree();
@@ -27,8 +27,8 @@ function CameraRig({ selected }: { selected: AgentId | null }) {
     const a = AGENTS.find((x) => x.id === selected)!;
     const [x, , z] = slotToPos(a.slot);
     return {
-      pos: new Vector3(x + 3.0, 3.1, z + 3.6),
-      tgt: new Vector3(x, 0.7, z),
+      pos: new Vector3(x + 2.65, 2.45, z + 3.25),
+      tgt: new Vector3(x, 0.78, z),
     };
   }, [selected]);
 
@@ -58,23 +58,42 @@ function Scene({
 }) {
   return (
     <>
-      <hemisphereLight args={["#565d80", "#0a0a0d", 1.5]} />
-      <directionalLight position={[5, 9, 5]} intensity={2.7} color="#f4f5ff" />
-      <directionalLight position={[-6, 5, -2]} intensity={1.1} color="#8b93c8" />
-      <spotLight position={[0, 10, 1.5]} angle={0.8} penumbra={1} intensity={95} distance={26} color="#ffffff" />
-      <pointLight position={[-4, 3, -3]} intensity={42} distance={20} color="#5e6ad2" />
-      <pointLight position={[3.5, 2.4, 4]} intensity={20} distance={14} color="#828fff" />
+      <fog attach="fog" args={["#080808", 10, 24]} />
+      <hemisphereLight args={["#eee8de", "#080808", 1.25]} />
+      <directionalLight position={[5, 9, 5]} intensity={2.3} color="#fff8ed" />
+      <directionalLight position={[-6, 5, -2]} intensity={0.9} color="#b8c2cc" />
+      <spotLight position={[0, 9, 2]} angle={0.72} penumbra={0.9} intensity={80} distance={24} color="#fff6e8" />
+      <pointLight position={[-4, 2.8, -3]} intensity={34} distance={17} color="#ff4f00" />
+      <pointLight position={[3.5, 2.2, 4]} intensity={12} distance={12} color="#ffd1b8" />
 
       <CameraRig selected={selected} />
 
-      {/* floor platform */}
-      <RoundedBox args={[9.2, 0.4, 8]} radius={0.12} smoothness={3} position={[0, 0.28, 0]} receiveShadow>
-        <meshStandardMaterial color="#15161a" roughness={0.92} metalness={0.04} />
+      {/* gallery-like architecture: concrete plinth, walls and orange identity plane */}
+      <RoundedBox args={[10.2, 0.32, 8.6]} radius={0.06} smoothness={3} position={[0, 0.3, 0]} receiveShadow>
+        <meshStandardMaterial color="#171715" roughness={0.82} metalness={0.03} />
       </RoundedBox>
-      <mesh position={[0, 0.481, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-        <planeGeometry args={[9, 7.8]} />
-        <meshStandardMaterial color="#1c1d22" roughness={0.85} metalness={0.06} />
+      <mesh position={[0, 0.465, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <planeGeometry args={[10, 8.4]} />
+        <meshStandardMaterial color="#23221f" roughness={0.77} metalness={0.04} />
       </mesh>
+      <mesh position={[0, 2.05, -4.12]}><boxGeometry args={[10, 3.2, 0.12]} /><meshStandardMaterial color="#d8d5ce" roughness={0.82} /></mesh>
+      <mesh position={[-5, 2.05, 0]}><boxGeometry args={[0.12, 3.2, 8.3]} /><meshStandardMaterial color="#bfc0bd" roughness={0.88} /></mesh>
+      <mesh position={[2.35, 2.1, -4.02]}><boxGeometry args={[4.1, 2.55, 0.06]} /><meshStandardMaterial color="#ff4f00" roughness={0.48} emissive="#ff4f00" emissiveIntensity={0.05} /></mesh>
+      <mesh position={[-2.9, 2.2, -4.0]}><boxGeometry args={[2.75, 1.5, 0.07]} /><meshStandardMaterial color="#111110" roughness={0.58} /></mesh>
+
+      {/* ceiling rails / softbox panels */}
+      {[-2.7, 0, 2.7].map((x) => (
+        <group key={x} position={[x, 3.72, -0.25]}>
+          <mesh><boxGeometry args={[0.045, 0.045, 7]} /><meshStandardMaterial color="#111" metalness={0.7} roughness={0.35} /></mesh>
+          <mesh position={[0, -0.04, 0.5]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[0.7, 1.8]} /><meshStandardMaterial color="#fff8ed" emissive="#fff8ed" emissiveIntensity={1.1} toneMapped={false} /></mesh>
+        </group>
+      ))}
+
+      {/* central material table creates a believable shared studio */}
+      <RoundedBox args={[1.9, 0.09, 0.9]} radius={0.03} smoothness={3} position={[0, 0.54, 0]}>
+        <meshStandardMaterial color="#111110" roughness={0.45} metalness={0.5} />
+      </RoundedBox>
+      <mesh position={[0, 0.28, 0]}><boxGeometry args={[0.42, 0.5, 0.42]} /><meshStandardMaterial color="#121211" metalness={0.55} roughness={0.45} /></mesh>
 
       {AGENTS.map((a) => (
         <Workstation
@@ -135,7 +154,7 @@ export default function Office3D({
         powerPreference: "high-performance",
         toneMapping: THREE.ACESFilmicToneMapping,
       }}
-      camera={{ position: [5.6, 4.7, 5.9], fov: 36, near: 0.1, far: 100 }}
+      camera={{ position: [6.8, 4.35, 7.4], fov: 34, near: 0.1, far: 100 }}
       onPointerMissed={() => onSelect(null)}
       style={{ width: "100%", height: "100%", background: "transparent" }}
     >

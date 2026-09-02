@@ -142,7 +142,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {/* ---------------------------------------------------- desktop sidebar */}
       <aside
         data-chrome
-        className={`sticky top-0 hidden h-screen flex-col border-r border-hairline/60 bg-canvas/60 backdrop-blur-xl md:flex ${
+        className={`sticky top-0 hidden h-screen flex-col border-r border-hairline/70 bg-canvas/90 backdrop-blur-2xl md:flex ${
           collapsed ? "w-[60px]" : "w-[236px]"
         } transition-[width] duration-150`}
       >
@@ -156,7 +156,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
               <span className="flex h-7 w-7 items-center justify-center rounded-md bg-primary text-on-primary">
                 <Icon name="zap" size={16} />
               </span>
-              AI Content Factory
+              <span className="tracking-[-0.04em]">CONTENT® STUDIO</span>
             </Link>
           )}
         </div>
@@ -221,7 +221,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
           className="sticky top-0 z-30 flex h-14 items-center gap-2 bg-gradient-to-b from-canvas/90 to-canvas/0 px-3 backdrop-blur-sm sm:px-4"
         >
           <span className="font-display text-body-sm font-semibold tracking-[-0.3px] md:hidden">
-            AI Content Factory
+            CONTENT® STUDIO
           </span>
 
           <button
