@@ -65,7 +65,12 @@ export function AgentPanel({
     setChatMeta(null);
   }, [id, agent.role]);
 
-  useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
+  useEffect(() => {
+    const node = endRef.current;
+    if (node && typeof node.scrollIntoView === "function") {
+      node.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+  }, [messages]);
 
   useEffect(() => {
     try {
