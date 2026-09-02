@@ -10,6 +10,11 @@ def get_llm_provider() -> LLMProvider:
     s = get_settings()
     if s.llm_is_mock:
         return MockLLMProvider()
+    if s.llm_provider == "ollama":
+        from app.providers.ollama_llm import OllamaLLMProvider
+
+        return OllamaLLMProvider(base_url=s.ollama_base_url, model=s.ollama_default_model,
+                                 timeout_seconds=s.local_model_timeout_seconds)
     from app.providers.anthropic_llm import AnthropicLLMProvider
 
     return AnthropicLLMProvider(api_key=s.anthropic_api_key or "", model=s.anthropic_model,

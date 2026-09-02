@@ -7,7 +7,6 @@ import {
   disconnectAccount,
   getCapabilities,
   listAccounts,
-  mockConnect,
   startConnect,
 } from "@/lib/api";
 
@@ -55,8 +54,10 @@ export default function PublishingAccounts() {
     setBusy(true);
     try {
       const r = await startConnect(platform);
-      if (r.mode === "REAL" && r.authorization_url) window.open(r.authorization_url, "_blank");
-      else await mockConnect(platform);
+      if (r.mode !== "REAL" || !r.authorization_url) {
+        throw new Error("이 플랫폼의 실제 OAuth 연결이 아직 준비되지 않았습니다. 모의 계정은 생성하지 않습니다.");
+      }
+      window.open(r.authorization_url, "_blank", "noopener,noreferrer");
       await load();
     } catch (e) {
       setErr(String(e));

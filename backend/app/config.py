@@ -49,7 +49,7 @@ class Settings(BaseSettings):
     checkpointer_kind: str = "postgres"   # postgres | memory
 
     # Providers
-    llm_provider: str = "mock"          # mock | anthropic
+    llm_provider: str = "mock"          # mock | ollama | anthropic
     anthropic_api_key: str | None = None
     anthropic_model: str = "claude-sonnet-5"
     # only needed for an identity-linked / workspace-scoped Anthropic Console key
@@ -272,7 +272,13 @@ class Settings(BaseSettings):
 
     @property
     def llm_is_mock(self) -> bool:
-        return self.llm_provider == "mock" or self.mock_mode or not self.anthropic_api_key
+        if self.mock_mode or self.llm_provider == "mock":
+            return True
+        if self.llm_provider == "ollama":
+            return not self.ollama_enabled
+        if self.llm_provider == "anthropic":
+            return not self.anthropic_api_key
+        return True
 
     @property
     def search_is_mock(self) -> bool:

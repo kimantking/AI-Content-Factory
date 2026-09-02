@@ -152,9 +152,9 @@ export default function AIConnectionsPage() {
         <h1 className="text-2xl font-bold">AI 연결</h1>
         <p className="mt-1 text-xs text-ink-subtle">
           발급받은 API 키를 여기에 입력하세요. 키는 서버에서 암호화되어 저장되며 화면·로그에 다시 표시되지 않습니다.
-          콘텐츠 파이프라인은 계속 MOCK 모드이고, [연결 확인]만 최소 비용의 실제 인증을 수행합니다.
+          연결 확인을 통과한 공급자는 실전 모드에서 실제 콘텐츠 제작에 사용됩니다. API 키는 백엔드에만 보관됩니다.
         </p>
-        <p className="mt-1 text-[11px] text-ink-tertiary">권장 순서: Anthropic → Tavily → Google AI → ElevenLabs</p>
+        <p className="mt-1 text-[11px] text-ink-tertiary">권장 순서: Ollama → Tavily → Google AI → ElevenLabs (Anthropic은 선택)</p>
       </div>
 
       {msg && <div className="rounded border border-hairline bg-surface-2 p-2 text-xs text-brand-secure">{msg}</div>}

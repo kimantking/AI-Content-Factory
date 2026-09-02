@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from app.providers.mock_llm import MockLLMProvider
 from app.providers.mock_search import MockSearchProvider
+from app.providers.ollama_llm import OllamaLLMProvider
 from app.providers.registry import get_llm_provider, get_search_provider
 
 
@@ -38,3 +39,14 @@ def test_registry_would_select_real_when_configured(_base_settings):
     s.anthropic_api_key = "sk-test"
     # constructing the real adapter imports anthropic; just assert selection logic
     assert not s.llm_is_mock
+
+
+def test_registry_selects_ollama_as_real_primary(_base_settings):
+    s = _base_settings
+    s.mock_mode = False
+    s.llm_provider = "ollama"
+    s.ollama_enabled = True
+    provider = get_llm_provider()
+    assert not s.llm_is_mock
+    assert isinstance(provider, OllamaLLMProvider)
+    assert provider.model == s.ollama_default_model

@@ -18,9 +18,19 @@ GOALS = ["Views", "Followers", "Revenue", "Profit", "Brand", "Balanced"]
 @router.get("/config")
 def config():
     s = get_settings()
+    readiness = {
+        "llm": not s.llm_is_mock,
+        "search": not s.search_is_mock,
+        "image": not s.media_provider_is_mock("image"),
+        "video": not s.media_provider_is_mock("video"),
+        "tts": not s.media_provider_is_mock("tts"),
+        "publishing": not s.dry_run and s.platform_client == "http",
+    }
     return {
         "mode": active_mode(),
         "mock_mode": s.mock_mode,
+        "real_mode_ready": all(readiness[k] for k in ("llm", "search", "image", "video")),
+        "readiness": readiness,
         "platforms": PLATFORMS,
         "goals": GOALS,
         "budget": {
