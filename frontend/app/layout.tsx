@@ -35,7 +35,7 @@ export const metadata: Metadata = {
 /* Set the theme attribute before first paint so there is no flash. Reads the
    saved choice, else the OS preference. Mirrors app/globals.css fallbacks. */
 // Dark is the product default. Light is opt-in only (explicit stored choice).
-const themeBootstrap = `(function(){try{var t=localStorage.getItem("acf-theme");document.documentElement.setAttribute("data-theme",t==="light"?"light":"dark");}catch(e){document.documentElement.setAttribute("data-theme","dark");}})();`;
+const themeBootstrap = `(function(){try{var t=localStorage.getItem("acf-theme");document.documentElement.setAttribute("data-theme",t==="dark"?"dark":"light");}catch(e){document.documentElement.setAttribute("data-theme","light");}})();`;
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
