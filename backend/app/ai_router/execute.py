@@ -39,6 +39,8 @@ def _provider_for(model_id: str, provider: str):
         return OllamaLLMProvider(base_url=s.ollama_base_url, model=model,
                                  timeout_seconds=s.local_model_timeout_seconds)
     if provider == "mock":
+        if not s.mock_mode:
+            raise ProviderError("MOCK provider is disabled in real mode", error_type="AUTH_ERROR")
         from app.providers.mock_llm import MockLLMProvider
 
         return MockLLMProvider()
@@ -53,17 +55,13 @@ def _provider_for(model_id: str, provider: str):
                                     error_type="AUTH_ERROR")
         except ImportError:
             pass
-        if s.llm_is_mock or not s.anthropic_api_key:
-            from app.providers.mock_llm import MockLLMProvider
-
-            return MockLLMProvider()
+        if not s.anthropic_api_key:
+            raise ProviderError("Anthropic API key is not configured", error_type="AUTH_ERROR")
         from app.providers.anthropic_llm import AnthropicLLMProvider
 
         return AnthropicLLMProvider(api_key=s.anthropic_api_key or "", model=model_id,
                                    workspace_id=getattr(s, "anthropic_workspace_id", ""))
-    from app.providers.mock_llm import MockLLMProvider
-
-    return MockLLMProvider()
+    raise ProviderError(f"unsupported LLM provider: {provider}", error_type="AUTH_ERROR")
 
 
 def _confidence_ok(data: dict) -> bool:
