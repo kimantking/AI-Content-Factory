@@ -1,0 +1,86 @@
+{
+  "last_verified_at": "2026-08-31",
+  "note": "Trend-discovery source availability checked against official docs on the date above. APPROVAL_REQUIRED / AUTH_REQUIRED are never reported as AVAILABLE. No unofficial scraping of platforms that lack a public API.",
+  "sources": [
+    {
+      "source_id": "youtube_most_popular",
+      "name": "YouTube Data API v3 — videos.list chart=mostPopular",
+      "source_type": "OFFICIAL_API", "provider": "YouTubeTrendProvider",
+      "auth_status": "AUTH_REQUIRED",
+      "freshness": "hours", "reliability": 0.7, "cost": "quota",
+      "known_limitations": "OAuth/API key required. Since 2025-07 mostPopular returns Music/Movies/Gaming charts (Trending page deprecated); regionCode filters by ISO country. Not general 'what's trending'."
+    },
+    {
+      "source_id": "google_trends",
+      "name": "Google Trends",
+      "source_type": "APPROVED_API", "provider": "GoogleTrendProvider",
+      "auth_status": "APPROVAL_REQUIRED",
+      "freshness": "hours", "reliability": 0.8, "cost": "unknown",
+      "known_limitations": "Official Trends API announced 2025-07-24 but still an application-gated alpha in 2026. pytrends archived/unmaintained. Use an approved third-party API or web search instead — do NOT scrape."
+    },
+    {
+      "source_id": "web_search",
+      "name": "Web / News Search (via SearchProvider)",
+      "source_type": "PUBLIC_SEARCH", "provider": "WebSearchTrendProvider",
+      "auth_status": "AUTH_REQUIRED",
+      "freshness": "hours", "reliability": 0.6, "cost": "per-call",
+      "known_limitations": "Uses the Phase 1-A SearchProvider (Tavily etc.). Available only when a search key is configured; recirculated old articles must be filtered by published_at."
+    },
+    {
+      "source_id": "news_search",
+      "name": "News headlines (via SearchProvider, news filter)",
+      "source_type": "PUBLIC_SEARCH", "provider": "NewsTrendProvider",
+      "auth_status": "AUTH_REQUIRED",
+      "freshness": "minutes-hours", "reliability": 0.65, "cost": "per-call",
+      "known_limitations": "Community/news signal — treated as a TREND SIGNAL, never a FACT SOURCE."
+    },
+    {
+      "source_id": "naver_datalab",
+      "name": "Naver DataLab — search-term trend API",
+      "source_type": "OFFICIAL_API", "provider": "NaverTrendProvider",
+      "auth_status": "AUTH_REQUIRED",
+      "freshness": "daily", "reliability": 0.75, "cost": "free-quota",
+      "known_limitations": "Official Naver DataLab open API. Requires a Naver client id/secret. Returns relative search-interest ratios by keyword group, not raw topics."
+    },
+    {
+      "source_id": "reddit_signal",
+      "name": "Reddit community signal",
+      "source_type": "OPTIONAL", "provider": "RedditTrendProvider",
+      "auth_status": "AUTH_REQUIRED",
+      "freshness": "minutes", "reliability": 0.5, "cost": "free-quota",
+      "known_limitations": "Reddit API has usage terms + rate limits. Community data is a trend SIGNAL only, kept separate from Research fact sources."
+    },
+    {
+      "source_id": "own_analytics",
+      "name": "Own channel analytics (Phase 3)",
+      "source_type": "OWN_ANALYTICS", "provider": "OwnAnalyticsTrendProvider",
+      "auth_status": "AVAILABLE",
+      "freshness": "daily", "reliability": 0.9, "cost": "free",
+      "known_limitations": "Evergreen + historical-performance signal from our own data. Always available. Not a live external trend."
+    },
+    {
+      "source_id": "tiktok_trends",
+      "name": "TikTok trending discovery",
+      "source_type": "OPTIONAL", "provider": "TikTokTrendProvider",
+      "auth_status": "UNAVAILABLE",
+      "freshness": "n/a", "reliability": 0.0, "cost": "n/a",
+      "known_limitations": "No official public trending-discovery API for third parties (Display API is own-content only). Not scraped."
+    },
+    {
+      "source_id": "x_trends",
+      "name": "X trends",
+      "source_type": "OPTIONAL", "provider": "XTrendProvider",
+      "auth_status": "LIMITED",
+      "freshness": "n/a", "reliability": 0.3, "cost": "paid-tier",
+      "known_limitations": "Trends endpoints require a paid API tier; free/basic tiers cannot read. Marked LIMITED until a tier is provisioned."
+    },
+    {
+      "source_id": "threads_trends",
+      "name": "Threads trending",
+      "source_type": "OPTIONAL", "provider": "ThreadsTrendProvider",
+      "auth_status": "UNAVAILABLE",
+      "freshness": "n/a", "reliability": 0.0, "cost": "n/a",
+      "known_limitations": "No official trending-discovery API. Not scraped."
+    }
+  ]
+}

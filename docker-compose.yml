@@ -1,0 +1,125 @@
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: acf
+      POSTGRES_PASSWORD: acf
+      POSTGRES_DB: acf
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U acf -d acf"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: unless-stopped
+
+  backend:
+    build: ./backend
+    command: sh -c "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port 8000"
+    # .env at the repo root is the source of truth for provider keys / MOCK_MODE.
+    # The `environment:` block below only pins values that MUST use the compose
+    # network (DB/Redis service names, host Ollama) and provides safe defaults;
+    # anything set in .env for those still wins via ${VAR:-default}.
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: postgresql+psycopg://acf:acf@postgres:5432/acf
+      SYNC_DATABASE_URL: postgresql://acf:acf@postgres:5432/acf
+      REDIS_URL: redis://redis:6379/0
+      # libpq reads PGOPTIONS for every connection. Auto-terminate any session
+      # left "idle in transaction" > 60s so a leaked/abandoned request (e.g. a
+      # client that dropped mid-snapshot) can't pin a row lock and make
+      # /health/ready — and thus this container's healthcheck — hang.
+      PGOPTIONS: "-c idle_in_transaction_session_timeout=60000"
+      MOCK_MODE: ${MOCK_MODE:-true}
+      # Ollama runs on the Windows/host machine, not in this container.
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-true}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL_DOCKER:-http://host.docker.internal:11434}
+      OLLAMA_DEFAULT_MODEL: ${OLLAMA_DEFAULT_MODEL:-gemma3:4b}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"   # resolves on Linux too
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+
+  worker:
+    build: ./backend
+    command: celery -A app.celery_app.celery_app worker --loglevel=info --concurrency=2 -Q celery,image,video,audio,render,publish,analytics,autopilot --beat
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      APP_ENV: ${APP_ENV:-development}
+      DATABASE_URL: postgresql+psycopg://acf:acf@postgres:5432/acf
+      SYNC_DATABASE_URL: postgresql://acf:acf@postgres:5432/acf
+      REDIS_URL: redis://redis:6379/0
+      PGOPTIONS: "-c idle_in_transaction_session_timeout=60000"
+      MOCK_MODE: ${MOCK_MODE:-true}
+      OLLAMA_ENABLED: ${OLLAMA_ENABLED:-true}
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL_DOCKER:-http://host.docker.internal:11434}
+      OLLAMA_DEFAULT_MODEL: ${OLLAMA_DEFAULT_MODEL:-gemma3:4b}
+      ACF_WORKER_ID: acf-worker   # stable registration id across prefork children
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    # The backend image's HEALTHCHECK curls :8000 — wrong for a Celery worker
+    # (no HTTP server here). Override it with a real worker check.
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A app.celery_app.celery_app inspect ping --timeout 10 >/dev/null 2>&1 || exit 1"]
+      interval: 30s
+      timeout: 15s
+      start_period: 40s
+      retries: 3
+    restart: unless-stopped
+
+  frontend:
+    build: ./frontend
+    # NO command override — the Next standalone image runs `node server.js`
+    # (Dockerfile CMD). Do NOT set `command: npm run start` (that image has no
+    # `next` binary -> "next: not found").
+    environment:
+      NEXT_PUBLIC_API_BASE: ${NEXT_PUBLIC_API_BASE:-http://localhost:8000}
+      # Docker sets HOSTNAME to the container id; Next standalone `server.js`
+      # binds to $HOSTNAME. Pin it to 0.0.0.0 so the server listens on all
+      # interfaces (and the healthcheck's 127.0.0.1 works).
+      HOSTNAME: "0.0.0.0"
+      PORT: "3000"
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:3000/ || exit 1"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+
+volumes:
+  pgdata:

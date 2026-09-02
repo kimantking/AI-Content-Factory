@@ -1,0 +1,253 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* =============================================================================
+   AI Content Factory - design tokens
+   Single source of truth: /DESIGN.md (Linear near-black system).
+   Every hex below is copied verbatim from DESIGN.md `colors:`. The light theme
+   is a role-map of DESIGN.md's `inverse-*` + `ink-*` values only (borders use
+   `ink-subtle` at reduced opacity). No invented colors.
+   ========================================================================== */
+
+:root {
+  color-scheme: dark;
+
+  /* --- DESIGN.md colors (R G B triples so Tailwind alpha utils work) --- */
+  --primary: 94 106 210;          /* #5e6ad2 */
+  --primary-hover: 130 143 255;   /* #828fff */
+  --primary-focus: 94 105 209;    /* #5e69d1 */
+  --on-primary: 255 255 255;      /* #ffffff */
+  --ink: 247 248 248;             /* #f7f8f8 */
+  --ink-muted: 208 214 224;       /* #d0d6e0 */
+  --ink-subtle: 138 143 152;      /* #8a8f98 */
+  --ink-tertiary: 98 102 109;     /* #62666d */
+  --canvas: 1 1 2;               /* #010102 */
+  --surface-1: 15 16 17;          /* #0f1011 */
+  --surface-2: 20 21 22;          /* #141516 */
+  --surface-3: 24 25 26;          /* #18191a */
+  --surface-4: 25 26 27;          /* #191a1b */
+  --hairline: 35 37 42;           /* #23252a */
+  --hairline-strong: 52 52 58;    /* #34343a */
+  --success: 39 166 68;           /* #27a644  (DESIGN.md semantic-success) */
+  --brand-secure: 122 127 173;    /* #7a7fad */
+
+  --hairline-o: 1;                /* hairline opacity knob (see tailwind cfg) */
+
+  /* V3: translucent panel for UI floating over the 3D studio / atmos bg */
+  --panel-bg: 14 15 17;          /* surface-1-ish */
+  --panel-a: 0.68;
+  --panel-blur: 20px;
+
+  /* fonts - DESIGN.md sanctions Inter / JetBrains Mono as the open substitutes.
+     next/font injects --font-inter / --font-jbmono in layout.tsx. */
+  --font-display: var(--font-inter), "SF Pro Display", -apple-system, system-ui,
+    "Segoe UI", Roboto, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-text: var(--font-inter), -apple-system, system-ui, "Segoe UI", Roboto,
+    "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+  --font-mono: var(--font-jbmono), ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+/* Light theme: DESIGN.md inverse-* + ink-* only. Dark stays the reference. */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --panel-bg: 255 255 255;
+  --panel-a: 0.82;
+  --ink: 0 0 0;                   /* #000000  inverse-ink */
+  --ink-muted: 62 62 68;          /* #3e3e44  hairline-tertiary hex, reused as text */
+  --ink-subtle: 98 102 109;       /* #62666d  ink-tertiary */
+  --ink-tertiary: 138 143 152;    /* #8a8f98  ink-subtle */
+  --canvas: 255 255 255;          /* #ffffff  inverse-canvas */
+  --surface-1: 245 246 246;       /* #f5f6f6  inverse-surface-1 */
+  --surface-2: 246 247 247;       /* #f6f7f7  inverse-surface-2 */
+  --surface-3: 246 247 247;
+  --surface-4: 246 247 247;
+  --hairline: 138 143 152;        /* #8a8f98, applied at --hairline-o below */
+  --hairline-strong: 98 102 109;  /* #62666d */
+  --hairline-o: 0.28;
+}
+
+/* Follow the OS when the user has not chosen. layout.tsx pre-sets data-theme
+   before paint; this is the no-JS / pre-hydration fallback. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]):not([data-theme="light"]) {
+    color-scheme: light;
+    --ink: 0 0 0;
+    --ink-muted: 62 62 68;
+    --ink-subtle: 98 102 109;
+    --ink-tertiary: 138 143 152;
+    --canvas: 255 255 255;
+    --surface-1: 245 246 246;
+    --surface-2: 246 247 247;
+    --surface-3: 246 247 247;
+    --surface-4: 246 247 247;
+    --hairline: 138 143 152;
+    --hairline-strong: 98 102 109;
+    --hairline-o: 0.28;
+  }
+}
+
+* {
+  border-color: rgb(var(--hairline) / var(--hairline-o));
+}
+
+body {
+  background: rgb(var(--canvas));
+  color: rgb(var(--ink));
+  font-family: var(--font-text);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* atmospheric depth - a single faint lavender bloom from the top, fixed behind
+   everything. Gives the near-black canvas a studio feel without gradients on
+   surfaces. (V3) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(115% 70% at 50% -12%, rgb(var(--primary) / 0.12), transparent 60%),
+    radial-gradient(80% 50% at 100% 0%, rgb(var(--primary-hover) / 0.06), transparent 55%);
+}
+:root[data-theme="light"] body::before {
+  background: radial-gradient(115% 70% at 50% -12%, rgb(var(--primary) / 0.06), transparent 60%);
+}
+body > * { position: relative; z-index: 1; }
+
+::selection {
+  background: rgb(var(--primary) / 0.32);
+}
+
+/* -------------------------------------------------------------------------- */
+/*  Component classes - DESIGN.md components:  spec                            */
+/* -------------------------------------------------------------------------- */
+@layer components {
+  /* headings use the display cut with DESIGN.md's negative tracking */
+  .t-display-xl { font-family: var(--font-display); font-size: 80px; font-weight: 600; line-height: 1.05; letter-spacing: -3px; }
+  .t-display-lg { font-family: var(--font-display); font-size: 56px; font-weight: 600; line-height: 1.10; letter-spacing: -1.8px; }
+  .t-display-md { font-family: var(--font-display); font-size: 40px; font-weight: 600; line-height: 1.15; letter-spacing: -1px; }
+  .t-headline   { font-family: var(--font-display); font-size: 28px; font-weight: 600; line-height: 1.20; letter-spacing: -0.6px; }
+  .t-card-title { font-family: var(--font-display); font-size: 22px; font-weight: 500; line-height: 1.25; letter-spacing: -0.4px; }
+  .t-subhead    { font-family: var(--font-display); font-size: 20px; font-weight: 400; line-height: 1.40; letter-spacing: -0.2px; }
+  .t-eyebrow    { font-family: var(--font-text); font-size: 13px; font-weight: 500; line-height: 1.30; letter-spacing: 0.4px; text-transform: uppercase; color: rgb(var(--ink-subtle)); }
+  .t-mono       { font-family: var(--font-mono); font-size: 13px; line-height: 1.5; }
+
+  .card {
+    background: rgb(var(--surface-1));
+    border: 1px solid rgb(var(--hairline) / var(--hairline-o));
+    border-radius: 12px;                 /* DESIGN.md rounded.lg */
+  }
+  /* Vision-UI-family dark-SaaS card: faint diagonal sheen + top edge highlight
+     (adapted from the translucent navy panel language, in our near-black tokens) */
+  :root:not([data-theme="light"]) .card {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.05);
+    background-image: linear-gradient(150deg, rgb(255 255 255 / 0.03), transparent 42%);
+  }
+  .card-2 { background: rgb(var(--surface-2)); }
+
+  /* gradient hero tile - the single emphasised KPI (Vision-UI signature) */
+  .card-hero {
+    border: 1px solid rgb(var(--primary) / 0.35);
+    border-radius: 12px;
+    background:
+      linear-gradient(140deg, rgb(var(--primary) / 0.22), rgb(var(--primary) / 0.04) 55%, transparent),
+      rgb(var(--surface-1));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.08), 0 18px 40px -22px rgb(var(--primary) / 0.4);
+  }
+  :root[data-theme="light"] .card-hero {
+    background: linear-gradient(140deg, rgb(var(--primary) / 0.14), transparent 60%), rgb(var(--surface-1));
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7);
+  }
+
+  /* V3 floating glass panel - for UI that sits over the 3D studio / atmos bg */
+  .panel {
+    background: rgb(var(--panel-bg) / var(--panel-a));
+    -webkit-backdrop-filter: blur(var(--panel-blur)) saturate(1.4);
+    backdrop-filter: blur(var(--panel-blur)) saturate(1.4);
+    border: 1px solid rgb(var(--hairline) / var(--hairline-o));
+    border-radius: 14px;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.06), 0 24px 60px -20px rgb(0 0 0 / 0.6);
+  }
+  :root[data-theme="light"] .panel {
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / 0.7), 0 20px 50px -24px rgb(15 23 42 / 0.25);
+  }
+  .card-p { padding: 24px; }             /* DESIGN.md spacing.lg */
+  @media (max-width: 640px) { .card-p { padding: 16px; } }
+
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+    border-radius: 8px;                  /* DESIGN.md rounded.md - CTAs are never pill */
+    padding: 8px 14px;                   /* DESIGN.md button-primary */
+    font-family: var(--font-text); font-size: 14px; font-weight: 500; line-height: 1.2;
+    transition: background-color .15s, border-color .15s, transform .05s;
+    white-space: nowrap;
+  }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .5; pointer-events: none; }
+  .btn:focus-visible { outline: 2px solid rgb(var(--primary-focus) / .5); outline-offset: 2px; }
+
+  .btn-primary   { background: rgb(var(--primary)); color: rgb(var(--on-primary)); }
+  .btn-primary:hover:not(:disabled) { background: rgb(var(--primary-hover)); }
+  .btn-secondary { background: rgb(var(--surface-1)); color: rgb(var(--ink)); border: 1px solid rgb(var(--hairline) / var(--hairline-o)); }
+  .btn-secondary:hover:not(:disabled) { background: rgb(var(--surface-2)); }
+  .btn-ghost     { background: transparent; color: rgb(var(--ink-muted)); }
+  .btn-ghost:hover:not(:disabled) { background: rgb(var(--surface-1)); color: rgb(var(--ink)); }
+  .btn-danger    { background: transparent; color: rgb(var(--ink)); border: 1px solid rgb(var(--hairline-strong)); }
+  .btn-danger:hover:not(:disabled) { background: rgb(var(--surface-2)); }
+
+  .input {
+    width: 100%;
+    background: rgb(var(--surface-1));
+    color: rgb(var(--ink));
+    border: 1px solid rgb(var(--hairline) / var(--hairline-o));
+    border-radius: 8px;
+    padding: 8px 12px;                   /* DESIGN.md text-input */
+    font-family: var(--font-text); font-size: 14px; line-height: 1.5;
+  }
+  .input::placeholder { color: rgb(var(--ink-tertiary)); }
+  .input:focus-visible { outline: 2px solid rgb(var(--primary-focus) / .5); outline-offset: 1px; border-color: rgb(var(--hairline-strong)); }
+
+  /* native <select> styled to match .input (keeps semantics + a11y) */
+  select.input, .select {
+    -webkit-appearance: none;
+    appearance: none;
+    padding-right: 30px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%238a8f98' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 9px center;
+    cursor: pointer;
+  }
+  select.input option { background: rgb(var(--surface-2)); color: rgb(var(--ink)); }
+
+  .chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    border-radius: 9999px;               /* DESIGN.md rounded.pill - status only */
+    border: 1px solid rgb(var(--hairline) / var(--hairline-o));
+    padding: 2px 9px;
+    font-family: var(--font-text); font-size: 12px; font-weight: 500; line-height: 1.4;
+    color: rgb(var(--ink-muted));
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+
+  .kv { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding: 7px 0; font-size: 14px; border-bottom: 1px solid rgb(var(--hairline) / var(--hairline-o)); }
+  .kv:last-child { border-bottom: 0; }
+  .kv > dt { color: rgb(var(--ink-subtle)); }
+  .kv > dd { text-align: right; font-weight: 500; font-variant-numeric: tabular-nums; }
+
+  /* legacy aliases kept so un-swept pages don't visually break on dark */
+  .btn-primary, .btn-ghost { }
+}
+
+/* Reduced motion (skill 6.B) */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .001ms !important; transition-duration: .001ms !important; }
+}
+
+/* AI Support capture mode - Phase 10 contract, unchanged */
+body.capture-mode [data-chrome] { display: none !important; }
+body.capture-mode { background: rgb(var(--canvas)); }
+body.capture-mode .capture-hide { display: none !important; }

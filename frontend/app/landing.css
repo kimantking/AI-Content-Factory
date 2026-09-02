@@ -1,0 +1,104 @@
+/* ============================================================
+   AI 콘텐츠 공장 — 제품 랜딩
+   스위스 에디토리얼 / 브루탈리스트. 대시보드 토큰과 완전 분리.
+   .landing 스코프 안에서만 유효. 그림자 전면 금지, 헤어라인만.
+   ============================================================ */
+
+.landing {
+  --paper: #f2f0ed;
+  --ink: #0a0a0a;
+  --accent: #ff4d0d;
+  --hairline: rgba(10, 10, 10, 0.12);
+  --hairline-strong: rgba(10, 10, 10, 0.24);
+  --radius: 16px;
+  --gutter: clamp(16px, 4vw, 64px);
+
+  position: relative;
+  z-index: 1;
+  min-height: 100dvh;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--font-inter-tight), "Inter Tight", -apple-system, "Apple SD Gothic Neo",
+    "Malgun Gothic", system-ui, sans-serif;
+  font-feature-settings: "ss01", "cv05";
+  -webkit-font-smoothing: antialiased;
+  overflow-x: clip;
+}
+
+/* the landing paints over the dashboard's atmospheric ::before */
+:root:has(.landing) body::before { display: none !important; }
+:root:has(.landing) body { background: var(--paper); }
+
+.landing ::selection { background: var(--accent); color: #fff; }
+
+/* ---- type scale ---- */
+.landing .t-hero {
+  font-size: clamp(64px, 12vw, 220px);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.landing .t-h2 {
+  font-size: clamp(40px, 7vw, 120px);
+  line-height: 0.92;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+.landing .t-num {
+  font-size: clamp(56px, 10vw, 180px);
+  line-height: 0.9;
+  letter-spacing: -0.03em;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+.landing .t-h3 {
+  font-size: clamp(22px, 3vw, 44px);
+  line-height: 1;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+}
+.landing .t-lead {
+  font-size: clamp(16px, 1.4vw, 20px);
+  line-height: 1.4;
+  letter-spacing: -0.01em;
+  font-weight: 400;
+}
+.landing .t-body {
+  font-size: 15px;
+  line-height: 1.55;
+  letter-spacing: 0;
+}
+.landing .t-label {
+  font-family: var(--font-jbmono), ui-monospace, "JetBrains Mono", monospace;
+  font-size: 10.5px;
+  line-height: 1.2;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.landing .accent { color: var(--accent); }
+.landing .hair { border-color: var(--hairline); }
+
+/* section stacking - each pins, next slides over with a hairline lip */
+.landing .stack-section {
+  position: sticky;
+  top: 0;
+  min-height: 100dvh;
+  background: var(--paper);
+  border-top: 1px solid var(--hairline);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+.landing .stack-section:first-child { border-top: 0; border-radius: 0; }
+
+/* vertical editorial label */
+.landing .vlabel {
+  writing-mode: vertical-rl;
+  transform: rotate(180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing * { animation: none !important; transition-duration: 0.001ms !important; }
+}

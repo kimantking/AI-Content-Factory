@@ -1,0 +1,22 @@
+{
+  "brand": "default",
+  "formality": 0.4,
+  "humor": 0.2,
+  "directness": 0.75,
+  "energy": 0.6,
+  "question_frequency": 0.12,
+  "slang_level": 0.1,
+  "technical_level": 0.45,
+  "emotion_level": 0.4,
+  "storytelling_style": "concrete-example-first",
+  "pause_style": "natural-breath",
+  "sentence_length_distribution": [4, 6, 11, 5, 17, 4, 9, 13, 6],
+  "favorite_expressions": ["짚어보면", "핵심은 이거다", "여기서 갈린다"],
+  "forbidden_expressions": [
+    "안녕하세요 여러분",
+    "오늘은 ~에 대해 알아보겠습니다",
+    "지금부터 자세히 살펴보겠습니다",
+    "결론적으로",
+    "여러분은 어떻게 생각하시나요?"
+  ]
+}

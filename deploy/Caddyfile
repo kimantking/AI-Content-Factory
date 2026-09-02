@@ -1,0 +1,30 @@
+# Optional TLS reverse proxy for the production overlay (profile: proxy).
+# Replace acf.example.com with the real domain once one exists.
+# Enable with:  docker compose -f docker-compose.yml -f docker-compose.prod.yml --profile proxy up -d
+{
+	# email for ACME / Let's Encrypt; set ACME_EMAIL in the environment
+	email {$ACME_EMAIL}
+}
+
+{$PROXY_DOMAIN:acf.example.com} {
+	encode gzip
+
+	# API + health + metrics + ops
+	@api path /api/* /health/* /metrics /webhooks/* /files/* /docs /openapi.json
+	handle @api {
+		reverse_proxy backend:8000
+	}
+
+	# everything else -> Next.js frontend
+	handle {
+		reverse_proxy frontend:3000
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options nosniff
+		X-Frame-Options DENY
+		Referrer-Policy no-referrer
+		-Server
+	}
+}

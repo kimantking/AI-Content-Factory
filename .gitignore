@@ -1,0 +1,38 @@
+# secrets
+.env
+.env.*
+!.env.example
+*.env.local
+deploy/*.env
+!deploy/*.env.example
+*.key
+*.pem
+secrets/
+run/secrets/
+credentials*.json
+token_dump*.json
+
+# python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# node
+node_modules/
+.next/
+dist/
+build/
+coverage/
+
+# data / artifacts
+storage/
+outputs/
+temp/
+logs/
+*.log
+pgdata/
+backups/

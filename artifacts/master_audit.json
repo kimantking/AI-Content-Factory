@@ -1,0 +1,201 @@
+{
+  "audit": "MASTER_IMPLEMENTATION_AUDIT",
+  "scope": "Phase 1 - Phase 8 (incl. Cross-Phase Intelligence Upgrade)",
+  "date": "2026-09-01",
+  "revisions": [
+    {
+      "date": "2026-09-01",
+      "event": "initial audit",
+      "verdict": "C",
+      "can_proceed_to_phase_9": "NO",
+      "blocking": [
+        "AUDIT-P8-001"
+      ]
+    },
+    {
+      "date": "2026-09-01",
+      "event": "AUDIT-P8-001 repair (MASTER GAP REPAIR)",
+      "verdict": "B",
+      "can_proceed_to_phase_9": "YES",
+      "blocking": []
+    },
+    {
+      "date": "2026-09-01",
+      "event": "MASTER MEDIUM GAP REPAIR (Phase 1-8 baseline hardening, D95)",
+      "verdict": "B",
+      "can_proceed_to_phase_9": "YES",
+      "blocking": [],
+      "baseline": "PHASE_1_8_FUNCTIONAL_BASELINE_LOCKED",
+      "medium_gaps_resolved": ["AUDIT-P8-006", "AUDIT-P8-005", "AUDIT-P8-003",
+                               "AUDIT-P8-002", "AUDIT-P8-004", "AUDIT-P6-001", "AUDIT-P7-001"],
+      "new_migrations": ["0011_medium_repair"],
+      "new_dependencies": 0
+    }
+  ],
+  "method": "code-as-source-of-truth + targeted runtime probes; no full re-run before the repair; gap repair followed by targeted -> affected -> full regression",
+  "structural": {
+    "migration_head": "0010_phase8",
+    "migration_branches": 0,
+    "orm_tables": 97,
+    "orm_db_column_mismatches": 0,
+    "non_orm_db_tables": [
+      "checkpoint_blobs",
+      "checkpoint_migrations",
+      "checkpoint_writes",
+      "checkpoints"
+    ],
+    "non_orm_db_tables_reason": "LangGraph Postgres checkpointer, intentionally not Alembic-managed (DECISIONS D6)",
+    "live_api_routes": 162,
+    "frontend_routes": 23,
+    "tests_collected_before_repair": 434,
+    "tests_after_p8_001_repair": 449,
+    "tests_after_medium_repair": 486,
+    "full_regression_after_medium_repair": {
+      "passed": 486,
+      "failed": 0,
+      "errors": 0,
+      "skipped": 0,
+      "method": "5 batches (environment kills >13-min jobs); totals summed from per-batch JUnit XML",
+      "batches": {
+        "agents+ai_router+intel": 136,
+        "autopilot+governance+edit": 88,
+        "pipeline_integration+api+phase8_e2e+library+mb": 72,
+        "root_files_x8+media+analytics": 75,
+        "ops+publishing+video": 115
+      },
+      "delta_reason": "+37 = new targeted MEDIUM-gap tests (P8-006 11, P8-005 3, P8-003 5, P8-002 5, P6-001 5, P7-001 6, P8-004 2)"
+    },
+    "new_dependencies_phases_6_7_8_intel_and_repairs": 0,
+    "new_migrations_total": ["0011_medium_repair"]
+  },
+  "audit_p8_001": {
+    "status": "RESOLVED",
+    "was_severity": "HIGH",
+    "fix": {
+      "new_file": "app/agents/model_gateway.py",
+      "entry": "routed_complete(agent_name, task, system, user, context, session, campaign_id, workspace_id, ...) -> GatewayResponse",
+      "flow": "map task -> router (agent_type, task_type) -> ai_router.run_routed (select -> provider -> structured-output validation -> bounded escalation -> fallback chain -> telemetry + cost); provider_task = original task label; legacy-provider fallback on router error (the one EXPLICIT_EXCEPTION)",
+      "call_sites_swapped": [
+        "app/agents/nodes.py::_run_llm",
+        "app/agents/media_nodes.py::_llm_json",
+        "app/agents/nodes.py natural-writing pass (GatewayLLM shim)",
+        "app/autopilot/pipeline.py::_llm_json (topic_extract) — found in a follow-up §19 sweep"
+      ],
+      "support_changes": [
+        "ai_router/registry.py: added 'mock' ModelEntry, enabled only when llm_is_mock",
+        "ai_router/router.py: mock entry as last-resort candidate for non-deterministic tiers (excluded under LOCAL_ONLY)",
+        "ai_router/execute.py: _provider_for handles provider=='mock'; run_routed gained provider_task param; RoutedResult carries input_tokens/output_tokens/reason",
+        "get_llm_provider import removed from nodes.py and media_nodes.py"
+      ]
+    },
+    "evidence_tests": "tests/agents/test_model_gateway.py (15 tests, all pass)",
+    "checklist_37": {
+      "model_router_implemented": "YES",
+      "model_router_tested": "YES",
+      "model_router_wired_to_production_agents": "YES",
+      "local_model_routable_in_production_path": "YES (light/standard agent task -> gemma3:4b, provider=ollama, real local call)",
+      "agent_policies_affect_execution": "YES (research/fact/platform_adapt/scene_plan -> standard; strategy/hook/script -> premium)",
+      "escalation_used": "YES (bad local JSON -> next engine, escalated + fallback_used, no loop)",
+      "local_only_invariant": "YES (LOCAL_ONLY + local failure -> 0 cloud calls)",
+      "telemetry": "YES (>=4 ModelRoutingEvent rows per full campaign; carries campaign_id + workspace_id)",
+      "direct_provider_bypass_unauthorized": 0
+    },
+    "followup_sweep": "§19: 1 more unrouted production LLM call (autopilot topic extraction) found + routed; benchmark.py and the model_gateway legacy fallback are the only sanctioned direct calls"
+  },
+  "summary_after_repair": {
+    "requirements_inventoried": 132,
+    "implemented_tested": 113,
+    "implemented_local_verified": 4,
+    "implemented_mock_verified_only": 14,
+    "partial": 0,
+    "design_only": 3,
+    "needs_credentials": 10,
+    "needs_production_environment": 8,
+    "not_implemented": 0,
+    "gaps_critical": 0,
+    "gaps_high": 0,
+    "gaps_medium": 0,
+    "gaps_low": 5,
+    "baseline": "PHASE_1_8_FUNCTIONAL_BASELINE_LOCKED"
+  },
+  "medium_gap_repair": {
+    "date": "2026-09-01",
+    "decision": "D95",
+    "AUDIT-P8-006": {"status": "RESOLVED", "fix": "model_gateway._compose_system() runs intel.composer.compose before routing; brand/platform/agent-alias filtered; user disable switch (ReferenceFeedback BLOCK/NOT_USEFUL/WRONG); lineage -> ModelRoutingEvent.prompt_lineage (mig 0011)", "tests": "tests/agents/test_prompt_composer_wiring.py (11)"},
+    "AUDIT-P8-005": {"status": "RESOLVED", "fix": "ModelRouter._apply_performance reorders candidates by ModelPerformance strength (STRONG up / WEAK down), db threaded from run_routed, min-sample guarded, autotune flag", "tests": "tests/ai_router/test_autotune.py (3)"},
+    "AUDIT-P8-003": {"status": "RESOLVED", "fix": "app/library/search.py::global_search + GET /api/search across campaign/platform_content/channel/brand/reference/publication", "tests": "tests/library/test_global_search.py (5)"},
+    "AUDIT-P8-002": {"status": "RESOLVED", "fix": "app/edit/nl_to_request.py deterministic NL->EditRequest + impact_of(plan_rerender) + POST /api/library/{id}/edit-plan; scene_io.py loader", "tests": "tests/edit/test_nl_to_request.py (5)", "residual_low": "scene-editor panel UI not built"},
+    "AUDIT-P8-004": {"status": "RESOLVED", "fix": "frontend lib/api.ts::finishSetup + app/setup/page.tsx POST /api/workspaces + /api/brands; create_workspace/create_brand now db.commit()", "tests": "tests/mb/test_setup_wizard_persistence.py (2) + tsc clean"},
+    "AUDIT-P6-001": {"status": "RESOLVED", "fix": "app/autopilot/capacity.py per-channel slots + budget headroom; controller caps run by portfolio_capacity (autopilot_respect_channel_capacity, falls back to autopilot_daily_content_max); GET /api/publishing/calendar/capacity", "tests": "tests/autopilot/test_capacity.py (5)"},
+    "AUDIT-P7-001": {"status": "RESOLVED", "fix": "app/governance/policy_verify.py verification_report (stale/UNKNOWN review queue, LEGAL_REVIEW_REQUIRED) + attested record_verification (GovernanceEvent, UNKNOWN->ACTIVE only on explicit activate_unknown) + due_for_review; GET/POST /api/policy/verif*", "tests": "tests/governance/test_policy_verify.py (6)", "still_pending": "live policy fetch = NEEDS_PRODUCTION_ENVIRONMENT"}
+  },
+  "phase_status": {
+    "phase_1": "IMPLEMENTED+TESTED",
+    "phase_2": "IMPLEMENTED+MOCK_VERIFIED (real platforms NEEDS_CREDENTIALS)",
+    "phase_3": "IMPLEMENTED+MOCK_VERIFIED (real analytics NEEDS_CREDENTIALS)",
+    "phase_4": "IMPLEMENTED+MOCK_VERIFIED (real trend sources NEEDS_CREDENTIALS)",
+    "phase_5": "IMPLEMENTED+LOCAL/STAGING_VERIFIED (prod infra NEEDS_PRODUCTION_ENVIRONMENT)",
+    "phase_6": "IMPLEMENTED+TESTED (capacity planner MEDIUM gap)",
+    "phase_7": "IMPLEMENTED+TESTED (policy registry = fixtures, MEDIUM)",
+    "intelligence_upgrade": "IMPLEMENTED+TESTED",
+    "phase_8": "IMPLEMENTED+TESTED (AUDIT-P8-001 RESOLVED; router + Ollama on the agent path)"
+  },
+  "gaps": [
+    {
+      "id": "AUDIT-P8-001",
+      "severity": "RESOLVED",
+      "feature": "Model Router + Ollama on the agent content-production path",
+      "resolved_by": "app/agents/model_gateway.py + call-site swaps; tests/agents/test_model_gateway.py"
+    },
+    {"id": "AUDIT-P8-006", "severity": "RESOLVED", "feature": "PromptComposer / LearnedSkills merged into the agent system prompt", "resolved_by": "model_gateway._compose_system(); tests/agents/test_prompt_composer_wiring.py (11); D95"},
+    {"id": "AUDIT-P6-001", "severity": "RESOLVED", "feature": "cross-channel capacity planner", "resolved_by": "app/autopilot/capacity.py + controller cap + /api/publishing/calendar/capacity; tests/autopilot/test_capacity.py (5); D95"},
+    {"id": "AUDIT-P8-002", "severity": "RESOLVED", "feature": "natural-language edit + Impact Analyzer (backend)", "resolved_by": "app/edit/nl_to_request.py + POST /api/library/{id}/edit-plan; tests/edit/test_nl_to_request.py (5); D95. Panel UI -> LOW (AUDIT-L-003)"},
+    {"id": "AUDIT-P8-003", "severity": "RESOLVED", "feature": "unified global search", "resolved_by": "app/library/search.py + GET /api/search; tests/library/test_global_search.py (5); D95"},
+    {"id": "AUDIT-P8-004", "severity": "RESOLVED", "feature": "Setup Wizard server persistence", "resolved_by": "finishSetup -> /api/workspaces + /api/brands (now commit); tests/mb/test_setup_wizard_persistence.py (2) + tsc; D95"},
+    {"id": "AUDIT-P8-005", "severity": "RESOLVED", "feature": "router auto-tune from performance memory", "resolved_by": "ModelRouter._apply_performance (min-sample guarded); tests/ai_router/test_autotune.py (3); D95"},
+    {"id": "AUDIT-P7-001", "severity": "RESOLVED", "feature": "human-in-the-loop platform-policy verification", "resolved_by": "app/governance/policy_verify.py + GET/POST /api/policy/verif*; tests/governance/test_policy_verify.py (6); D95. Live fetch stays NEEDS_PRODUCTION_ENVIRONMENT"},
+    {
+      "id": "AUDIT-L-001",
+      "severity": "LOW",
+      "feature": "16 narrow swallow-except blocks"
+    },
+    {
+      "id": "AUDIT-L-002",
+      "severity": "LOW",
+      "feature": "WhisperX / VMAF adapters (scaffolded, working fallbacks)"
+    },
+    {
+      "id": "AUDIT-L-003",
+      "severity": "LOW",
+      "feature": "automated frontend/a11y tests"
+    },
+    {
+      "id": "AUDIT-L-004",
+      "severity": "LOW",
+      "feature": "full regression run in two halves in this environment"
+    },
+    {
+      "id": "AUDIT-L-005",
+      "severity": "LOW",
+      "feature": "start-local.ps1 environment assumptions"
+    }
+  ],
+  "verdict": {
+    "choice": "B",
+    "text": "PHASE 1-8 FUNCTIONALLY COMPLETE, PRODUCTION VERIFICATION PENDING",
+    "baseline": "PHASE_1_8_FUNCTIONAL_BASELINE_LOCKED",
+    "implementation_gaps": {"critical": 0, "high": 0, "medium": 0, "low": 5},
+    "full_regression": "486 passed / 0 failed / 0 errors",
+    "can_proceed_to_phase_9": "YES",
+    "blocking_gap_ids": [],
+    "production_verification_pending": [
+      "Anthropic / Tavily / media-provider API keys",
+      "SNS OAuth + app review (10 platforms)",
+      "platform analytics scopes",
+      "revenue API permissions",
+      "real off-site backup + WAL/PITR",
+      "domain + TLS",
+      "external monitoring / alert delivery"
+    ]
+  }
+}

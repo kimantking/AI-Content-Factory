@@ -1,0 +1,122 @@
+{
+  "reviewed_at": "2026-08-31",
+  "components": [
+    {
+      "name": "MoneyPrinterTurbo",
+      "repository": "https://github.com/harry0703/MoneyPrinterTurbo",
+      "version": "v1.3.4",
+      "license": "MIT",
+      "usage_type": "ALGORITHM_REFERENCE",
+      "feature": "topic->video-copy pipeline, material search, subtitle/BGM, task mgmt, provider abstraction",
+      "can_use_directly": true,
+      "reference_only": true,
+      "attribution_required": false,
+      "commercial_review_status": "CLEAR",
+      "notes": "MIT. We study the pipeline/provider-abstraction patterns only; no code copied."
+    },
+    {
+      "name": "whisperX",
+      "repository": "https://github.com/m-bain/whisperX",
+      "version": "latest",
+      "license": "BSD-2-Clause",
+      "usage_type": "DIRECT_DEPENDENCY",
+      "feature": "word-level timestamps, forced alignment, sentence boundaries",
+      "can_use_directly": true,
+      "reference_only": false,
+      "attribution_required": true,
+      "commercial_review_status": "CLEAR",
+      "notes": "Older docs mention BSD-4-Clause; current repo is BSD-2. Optional dep behind AlignmentProvider. Phase 1-B."
+    },
+    {
+      "name": "auto-editor",
+      "repository": "https://github.com/WyattBlue/auto-editor",
+      "version": "latest",
+      "license": "Unlicense (public domain)",
+      "usage_type": "ALGORITHM_REFERENCE",
+      "feature": "silence detection, dead-space removal, audio-based cutting, cut margins",
+      "can_use_directly": true,
+      "reference_only": true,
+      "attribution_required": false,
+      "commercial_review_status": "CLEAR",
+      "notes": "Code is public domain. We implement the silence/margin algorithm ideas in our Edit Engine. Phase 1-B."
+    },
+    {
+      "name": "PySceneDetect",
+      "repository": "https://github.com/Breakthrough/PySceneDetect",
+      "version": "0.6.x",
+      "license": "BSD-3-Clause",
+      "usage_type": "DIRECT_DEPENDENCY",
+      "feature": "scene cut / transition detection in existing footage",
+      "can_use_directly": true,
+      "reference_only": false,
+      "attribution_required": true,
+      "commercial_review_status": "CLEAR",
+      "notes": "BSD-3. Used to avoid cutting across existing shot boundaries. Phase 1-B."
+    },
+    {
+      "name": "Remotion",
+      "repository": "https://github.com/remotion-dev/remotion",
+      "version": "latest",
+      "license": "Remotion License (source-available)",
+      "usage_type": "OPTIONAL_TOOL",
+      "feature": "programmatic React-based video rendering",
+      "can_use_directly": false,
+      "reference_only": false,
+      "attribution_required": false,
+      "commercial_review_status": "REVIEW_REQUIRED",
+      "notes": "Free for individuals / for-profit orgs with <=3 employees. 4+ employees need a paid Company License ($25/seat/mo creators, or $0.01/render automators, $100/mo min). Decide FFmpeg-only vs Remotion before Phase 1-B render work."
+    },
+    {
+      "name": "Real-ESRGAN",
+      "repository": "https://github.com/xinntao/Real-ESRGAN",
+      "version": "0.3.0",
+      "license": "BSD-3-Clause",
+      "usage_type": "OPTIONAL_TOOL",
+      "feature": "image/video upscaling and artifact cleanup",
+      "can_use_directly": true,
+      "reference_only": false,
+      "attribution_required": true,
+      "commercial_review_status": "REVIEW_REQUIRED",
+      "notes": "Repo code BSD-3, but bundled pretrained weights depend on datasets with their own terms (e.g. some GAN weights). Verify weight provenance before commercial use. Phase 1-B, quality-gated."
+    },
+    {
+      "name": "RIFE (ECCV2022-RIFE)",
+      "repository": "https://github.com/hzwer/ECCV2022-RIFE",
+      "version": "latest",
+      "license": "MIT (code)",
+      "usage_type": "OPTIONAL_TOOL",
+      "feature": "video frame interpolation for low-FPS generated clips",
+      "can_use_directly": true,
+      "reference_only": false,
+      "attribution_required": true,
+      "commercial_review_status": "REVIEW_REQUIRED",
+      "notes": "Code MIT; README historically restricts some pretrained models to non-commercial / training-data terms. Confirm model weights license before commercial use. Phase 1-B, QA-before/after gated."
+    },
+    {
+      "name": "blader/humanizer",
+      "repository": "https://github.com/blader/humanizer",
+      "version": "latest",
+      "license": "MIT",
+      "usage_type": "REFERENCE_IMPLEMENTATION",
+      "feature": "agent skill that removes signs of AI-generated writing",
+      "can_use_directly": true,
+      "reference_only": true,
+      "attribution_required": false,
+      "commercial_review_status": "CLEAR",
+      "notes": "MIT. We analyse the tell-list / approach for our Natural Writing Engine but do NOT copy its prompts verbatim (Amendment §4)."
+    },
+    {
+      "name": "edge-tts",
+      "repository": "https://github.com/rany2/edge-tts",
+      "version": "latest",
+      "license": "LGPL-3.0",
+      "usage_type": "OPTIONAL_TOOL",
+      "feature": "free Microsoft Edge read-aloud TTS for dev/test",
+      "can_use_directly": false,
+      "reference_only": false,
+      "attribution_required": true,
+      "commercial_review_status": "REVIEW_REQUIRED",
+      "notes": "LGPL-3 code is fine, but it calls Microsoft Edge's online TTS with no Azure subscription; commercial use may violate Microsoft ToS. DEV/TEST TTSProvider candidate only, never the production default (Amendment §16)."
+    }
+  ]
+}

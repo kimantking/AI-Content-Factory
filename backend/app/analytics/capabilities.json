@@ -1,0 +1,167 @@
+{
+  "last_verified_at": "2026-08-31",
+  "note": "Metric availability checked against official developer docs on the date above. UNAVAILABLE = platform API does not expose it; NOT_AUTHORIZED = needs a scope/tier/review the account lacks; NOT_APPLICABLE = metric makes no sense for this content type; NOT_READY = too soon after publish. Never coerced to 0.",
+  "platforms": [
+    {
+      "platform": "youtube",
+      "official_api": "YouTube Analytics API v2 + Data API v3",
+      "required_scope": ["yt-analytics.readonly", "yt-analytics-monetary.readonly (revenue only)"],
+      "account_requirement": "channel owner; revenue requires an active YouTube Partner Program / monetization",
+      "historical_support": true,
+      "revenue_support": true,
+      "analytics_delay": "~48h for finalized revenue; core metrics near real-time",
+      "known_limitations": "estimatedRevenue only with monetary scope + monetization; Shorts vs long-form reported separately.",
+      "metrics": {
+        "views": "AVAILABLE", "estimatedMinutesWatched": "AVAILABLE",
+        "averageViewDuration": "AVAILABLE", "averageViewPercentage": "AVAILABLE",
+        "likes": "AVAILABLE", "comments": "AVAILABLE", "shares": "AVAILABLE",
+        "subscribersGained": "AVAILABLE", "subscribersLost": "AVAILABLE",
+        "cardImpressions": "AVAILABLE", "cardClickRate": "AVAILABLE",
+        "estimatedRevenue": "NOT_AUTHORIZED", "saves": "NOT_APPLICABLE",
+        "reposts": "NOT_APPLICABLE", "reach": "NOT_APPLICABLE"
+      }
+    },
+    {
+      "platform": "tiktok",
+      "official_api": "TikTok Display API (own Business account content)",
+      "required_scope": ["user.info.stats", "video.list"],
+      "account_requirement": "TikTok Business account; own content only",
+      "historical_support": false,
+      "revenue_support": false,
+      "analytics_delay": "hours",
+      "known_limitations": "Watch time, retention, traffic sources, audience demographics and revenue are NOT exposed by the API for third-party integrations. Creator dashboard CSV can be imported manually (source_type=MANUAL_IMPORT).",
+      "metrics": {
+        "views": "AVAILABLE", "likes": "AVAILABLE", "comments": "AVAILABLE",
+        "shares": "AVAILABLE", "followers_gained": "AVAILABLE",
+        "watch_time_seconds": "UNAVAILABLE", "avg_view_percentage": "UNAVAILABLE",
+        "completion_rate": "UNAVAILABLE", "estimated_revenue": "UNAVAILABLE",
+        "reach": "UNAVAILABLE", "impressions": "UNAVAILABLE"
+      }
+    },
+    {
+      "platform": "instagram",
+      "official_api": "Instagram Platform - Media Insights (Graph API v22+)",
+      "required_scope": ["instagram_business_basic", "instagram_business_manage_insights"],
+      "account_requirement": "Instagram Professional (Business/Creator)",
+      "historical_support": true,
+      "revenue_support": false,
+      "analytics_delay": "near real-time; some fields lag ~24-48h",
+      "known_limitations": "impressions & video_views deprecated in v22 (use 'views'). profile_views/website_clicks deprecated. No organic revenue via API. reels_skip_rate is Reels-only.",
+      "metrics": {
+        "views": "AVAILABLE", "reach": "AVAILABLE", "likes": "AVAILABLE",
+        "comments": "AVAILABLE", "shares": "AVAILABLE", "saves": "AVAILABLE",
+        "reposts": "AVAILABLE", "completion_rate": "NOT_APPLICABLE",
+        "impressions": "UNAVAILABLE", "estimated_revenue": "UNAVAILABLE",
+        "watch_time_seconds": "NOT_APPLICABLE"
+      }
+    },
+    {
+      "platform": "facebook",
+      "official_api": "Facebook Graph API - Page / Reels insights",
+      "required_scope": ["pages_read_engagement", "read_insights"],
+      "account_requirement": "Facebook Page (admin)",
+      "historical_support": true,
+      "revenue_support": false,
+      "analytics_delay": "~24h",
+      "known_limitations": "Metric NAMES differ from Instagram (post_impressions, post_video_views, blue_reels_play_count, post_video_avg_time_watched). In-stream ad revenue is a separate, limited report; treat as NOT_AUTHORIZED by default.",
+      "metrics": {
+        "impressions": "AVAILABLE", "reach": "AVAILABLE", "likes": "AVAILABLE",
+        "comments": "AVAILABLE", "shares": "AVAILABLE",
+        "watch_time_seconds": "AVAILABLE", "avg_watch_duration_seconds": "AVAILABLE",
+        "views": "AVAILABLE", "saves": "UNAVAILABLE",
+        "estimated_revenue": "NOT_AUTHORIZED"
+      }
+    },
+    {
+      "platform": "threads",
+      "official_api": "Threads API - post & account insights",
+      "required_scope": ["threads_basic", "threads_manage_insights"],
+      "account_requirement": "Threads account; personal accounts unlock demographics at 100 followers",
+      "historical_support": true,
+      "revenue_support": false,
+      "analytics_delay": "near real-time",
+      "known_limitations": "No watch time / retention / revenue. Per-post: views, likes, replies, reposts, quotes, shares.",
+      "metrics": {
+        "views": "AVAILABLE", "likes": "AVAILABLE", "comments": "AVAILABLE",
+        "reposts": "AVAILABLE", "quotes": "AVAILABLE", "shares": "AVAILABLE",
+        "reach": "UNAVAILABLE", "watch_time_seconds": "NOT_APPLICABLE",
+        "estimated_revenue": "UNAVAILABLE"
+      }
+    },
+    {
+      "platform": "x",
+      "official_api": "X API v2 - Tweet public_metrics / (organic metrics need user context + tier)",
+      "required_scope": ["tweet.read", "users.read"],
+      "account_requirement": "Paid API access (Free tier is write-only, no reads). Organic/non-public metrics need Basic+ tier.",
+      "historical_support": false,
+      "revenue_support": false,
+      "analytics_delay": "near real-time",
+      "known_limitations": "Free tier cannot read. public_metrics: like/reply/repost/quote/bookmark counts; impression_count and organic metrics require a paid tier + user-context auth.",
+      "metrics": {
+        "likes": "AVAILABLE", "comments": "AVAILABLE", "reposts": "AVAILABLE",
+        "quotes": "AVAILABLE", "bookmarks": "AVAILABLE",
+        "impressions": "NOT_AUTHORIZED", "views": "NOT_AUTHORIZED",
+        "estimated_revenue": "UNAVAILABLE", "watch_time_seconds": "NOT_APPLICABLE"
+      }
+    },
+    {
+      "platform": "pinterest",
+      "official_api": "Pinterest API v5 - pin analytics",
+      "required_scope": ["pins:read", "user_accounts:read"],
+      "account_requirement": "Pinterest account; TRIAL access is heavily rate-limited (owner only)",
+      "historical_support": true,
+      "revenue_support": false,
+      "analytics_delay": "~24-48h",
+      "known_limitations": "Metrics: IMPRESSION, SAVE, PIN_CLICK, OUTBOUND_CLICK, VIDEO_MRC_VIEW, VIDEO_AVG_WATCH_TIME. No revenue.",
+      "metrics": {
+        "impressions": "AVAILABLE", "saves": "AVAILABLE", "link_clicks": "AVAILABLE",
+        "views": "AVAILABLE", "avg_watch_duration_seconds": "AVAILABLE",
+        "likes": "UNAVAILABLE", "comments": "UNAVAILABLE",
+        "estimated_revenue": "UNAVAILABLE"
+      }
+    },
+    {
+      "platform": "linkedin",
+      "official_api": "LinkedIn - Organization Share Statistics (Community Management API)",
+      "required_scope": ["r_organization_social", "rw_organization_admin"],
+      "account_requirement": "Organization page + Community Management API partner review; member (personal) post analytics are effectively unavailable via API",
+      "historical_support": true,
+      "revenue_support": false,
+      "analytics_delay": "~24h",
+      "known_limitations": "APP_REVIEW_REQUIRED. Personal profile post analytics are not available. Org metrics: impressionCount, clickCount, likeCount, commentCount, shareCount, engagement.",
+      "metrics": {
+        "impressions": "NOT_AUTHORIZED", "link_clicks": "NOT_AUTHORIZED",
+        "likes": "NOT_AUTHORIZED", "comments": "NOT_AUTHORIZED",
+        "shares": "NOT_AUTHORIZED", "views": "NOT_AUTHORIZED",
+        "estimated_revenue": "UNAVAILABLE"
+      }
+    },
+    {
+      "platform": "naver_blog",
+      "official_api": "None verified for post analytics",
+      "required_scope": [],
+      "account_requirement": "Naver account",
+      "historical_support": false,
+      "revenue_support": false,
+      "analytics_delay": "n/a",
+      "known_limitations": "No official post-analytics API. Visitor count / dwell time / referral breakdown are only available via manual CSV export (source_type=CSV_IMPORT). Never synthesise them as API data.",
+      "metrics": {
+        "views": "UNAVAILABLE", "link_clicks": "UNAVAILABLE",
+        "estimated_revenue": "UNAVAILABLE"
+      }
+    },
+    {
+      "platform": "naver_clip",
+      "official_api": "None",
+      "required_scope": [],
+      "account_requirement": "Naver account (mobile)",
+      "historical_support": false,
+      "revenue_support": false,
+      "analytics_delay": "n/a",
+      "known_limitations": "No API. Manual import only.",
+      "metrics": {
+        "views": "UNAVAILABLE", "likes": "UNAVAILABLE", "estimated_revenue": "UNAVAILABLE"
+      }
+    }
+  ]
+}
