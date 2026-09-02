@@ -107,6 +107,10 @@ class ModelRouter:
         # routed decision + telemetry without a real key (executor swaps to MockLLM).
         mock = [] if (s.local_only or privacy == "local_only") else \
             self.reg.usable(kind="mock", min_context=context_size)
+        # Honour the explicitly configured primary provider. A stale or invalid
+        # cloud key must not take premium tasks away from a healthy local model.
+        if s.llm_provider == "ollama":
+            return local + cloud_prem + cloud_std + mock
         if tier == "local_light":
             return local + cloud_std + cloud_prem + mock
         if tier == "standard":
