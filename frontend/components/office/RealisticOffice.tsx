@@ -22,13 +22,13 @@ export function RealisticOffice({
 }) {
   return (
     <div className="relative h-full w-full overflow-hidden bg-[#f5d7e5]">
-      <img
-        src="/studio-office-real.png"
-        alt="통창과 파스텔 핑크 조명이 있는 실제 사무실"
-        className="absolute inset-0 h-full w-full object-cover object-center"
-        draggable={false}
+      <div
+        role="img"
+        aria-label="통창과 파스텔 핑크 조명이 있는 실제 사무실"
+        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
+        style={{ backgroundImage: "url('/studio-office-real.webp')" }}
       />
-      <div className="absolute inset-0 bg-gradient-to-b from-[#fff2f8]/10 via-transparent to-[#351d2a]/30" />
+      <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-white/5 via-transparent to-[#351d2a]/20" />
 
       {AGENTS.map((agent) => {
         const state = model.stations[agent.id];
@@ -43,7 +43,7 @@ export function RealisticOffice({
             aria-label={`${agent.name} · ${meta.ko}`}
             aria-pressed={chosen}
             onClick={() => onSelect(chosen ? null : agent.id)}
-            className={`group absolute -translate-x-1/2 -translate-y-1/2 text-center outline-none ${
+            className={`group absolute z-10 -translate-x-1/2 -translate-y-1/2 text-center outline-none ${
               reducedMotion ? "" : "office-agent"
             }`}
             style={{ left: pos.left, top: pos.top, animationDelay: pos.delay }}
@@ -53,7 +53,7 @@ export function RealisticOffice({
                 className="absolute inset-1 rounded-full blur-xl"
                 style={{ background: meta.hex, opacity: active ? 0.62 : 0.2 }}
               />
-              <img src="/studio-agent-pixel.png" alt="" className="relative block w-full drop-shadow-[0_8px_8px_rgba(30,12,24,.42)] [image-rendering:pixelated]" draggable={false} />
+              <img src="/studio-agent-chibi.webp" alt="" className="relative block w-full drop-shadow-[0_8px_8px_rgba(30,12,24,.38)] [image-rendering:pixelated]" draggable={false} />
               <span
                 className="absolute right-0 top-0 h-3 w-3 rounded-full border-2 border-white shadow"
                 style={{ background: meta.hex }}
