@@ -36,7 +36,7 @@ function hasWebGL(): boolean {
 
 /* radial + vertical mask so the rendered scene dissolves into the page - no box, no border */
 const SCENE_MASK =
-  "radial-gradient(130% 78% at 50% 42%, #000 52%, rgba(0,0,0,0.35) 82%, transparent 96%)";
+  "linear-gradient(to bottom, transparent 0%, #000 8%, #000 88%, transparent 100%)";
 
 export function OfficeStage({ snap, overlay }: { snap: SupportSnapshot | null; overlay?: ReactNode }) {
   const model = useMemo(() => deriveOffice(snap), [snap]);
@@ -63,7 +63,7 @@ export function OfficeStage({ snap, overlay }: { snap: SupportSnapshot | null; o
   return (
     <section aria-label="AI 오퍼레이션 스튜디오" className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6">
       {/* the studio is a full-bleed spatial band, not a widget */}
-      <div className="relative h-[300px] sm:h-[380px] lg:h-[440px]">
+      <div className="relative h-[390px] sm:h-[500px] lg:h-[620px]">
         {mode === "3d" ? (
           <div
             className="absolute inset-0"
@@ -84,8 +84,8 @@ export function OfficeStage({ snap, overlay }: { snap: SupportSnapshot | null; o
 
         {/* floating status label (desktop) */}
         {mode === "3d" && (
-          <div className="pointer-events-none absolute left-4 top-3 hidden items-center gap-2 sm:left-6 sm:flex">
-            <span className="t-eyebrow">오퍼레이션 스튜디오</span>
+          <div className="pointer-events-none absolute left-4 top-6 hidden items-center gap-3 sm:left-6 sm:flex">
+            <span className="font-mono text-[11px] uppercase tracking-[0.18em] text-primary">Live studio / 002</span>
             <span className="text-caption text-ink-tertiary">
               {model.hasJob ? "AI 에이전트 작업 중" : "모든 에이전트 대기"}
             </span>

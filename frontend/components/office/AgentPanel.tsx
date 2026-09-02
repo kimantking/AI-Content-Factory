@@ -28,14 +28,14 @@ export function AgentPanel({
 
   return (
     <aside
-      className="pointer-events-auto flex w-full flex-col gap-4 panel p-4 sm:w-[320px]"
+      className="pointer-events-auto flex w-full flex-col gap-4 panel border-l-2 border-l-primary p-5 sm:w-[360px]"
       role="dialog"
       aria-label={`${agent.name} 상세`}
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <p className="t-eyebrow">{agent.role}</p>
-          <h3 className="font-display text-[18px] font-semibold tracking-[-0.3px] text-ink">{agent.name}</h3>
+          <p className="font-mono text-[11px] uppercase tracking-[0.14em] text-primary">{agent.role}</p>
+          <h3 className="mt-1 font-display text-[24px] font-semibold uppercase tracking-[-0.05em] text-ink">{agent.name}</h3>
         </div>
         <button onClick={onClose} className="btn btn-ghost !px-1.5" aria-label="닫기">
           <Icon name="x" size={16} />

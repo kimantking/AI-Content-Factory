@@ -66,7 +66,7 @@ const config: Config = {
         eyebrow: ["13px", { lineHeight: "1.3", letterSpacing: "0.4px", fontWeight: "500" }],
       },
       maxWidth: {
-        workspace: "1240px",
+        workspace: "1440px",
       },
     },
   },

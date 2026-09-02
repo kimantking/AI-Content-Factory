@@ -102,9 +102,9 @@ export function deriveOffice(snap: SupportSnapshot | null): OfficeModel {
 /** state -> { ko label, hex accent } for both the 3D scene and the 2.5D fallback */
 export const STATE_META: Record<StationState, { ko: string; hex: string; dim: boolean }> = {
   IDLE: { ko: "대기", hex: "#62666d", dim: true },
-  RUNNING: { ko: "작업 중", hex: "#5e6ad2", dim: false },
-  ATTN: { ko: "주의", hex: "#7a7fad", dim: false },
-  FAILED: { ko: "오류", hex: "#8a8f98", dim: false },
-  BLOCKED: { ko: "차단됨", hex: "#8a8f98", dim: false },
+  RUNNING: { ko: "작업 중", hex: "#ff4f00", dim: false },
+  ATTN: { ko: "주의", hex: "#ff9b68", dim: false },
+  FAILED: { ko: "오류", hex: "#ff6b4a", dim: false },
+  BLOCKED: { ko: "차단됨", hex: "#d6d0c7", dim: false },
   DONE: { ko: "완료", hex: "#27a644", dim: false },
 };
