@@ -122,7 +122,7 @@ export function AgentPanel({
 
   return (
     <aside
-      className="pointer-events-auto flex max-h-[580px] w-full flex-col gap-4 overflow-y-auto panel border-l-2 border-l-primary p-5 sm:w-[410px]"
+      className="pointer-events-auto relative isolate flex max-h-[580px] w-full flex-col gap-4 overflow-y-auto panel border-l-2 border-l-primary bg-[#fffafd]/95 p-5 shadow-[0_24px_70px_rgba(47,22,37,.32)] backdrop-blur-xl sm:w-[410px]"
       role="dialog"
       aria-label={`${agent.name} 상세`}
     >
