@@ -142,7 +142,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {/* ---------------------------------------------------- desktop sidebar */}
       <aside
         data-chrome
-        className={`sticky top-0 hidden h-screen flex-col border-r border-hairline/70 bg-canvas/90 backdrop-blur-2xl md:flex ${
+        className={`sticky top-0 hidden h-screen flex-col border-r border-hairline/70 bg-canvas/55 backdrop-blur-2xl md:flex ${
           collapsed ? "w-[60px]" : "w-[236px]"
         } transition-[width] duration-150`}
       >

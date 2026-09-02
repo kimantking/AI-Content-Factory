@@ -58,27 +58,27 @@ function Scene({
 }) {
   return (
     <>
-      <fog attach="fog" args={["#080808", 10, 24]} />
-      <hemisphereLight args={["#eee8de", "#080808", 1.25]} />
+      <fog attach="fog" args={["#dfeaf2", 10, 24]} />
+      <hemisphereLight args={["#f8f1f5", "#8d91ad", 1.4]} />
       <directionalLight position={[5, 9, 5]} intensity={2.3} color="#fff8ed" />
       <directionalLight position={[-6, 5, -2]} intensity={0.9} color="#b8c2cc" />
       <spotLight position={[0, 9, 2]} angle={0.72} penumbra={0.9} intensity={80} distance={24} color="#fff6e8" />
-      <pointLight position={[-4, 2.8, -3]} intensity={34} distance={17} color="#ff4f00" />
-      <pointLight position={[3.5, 2.2, 4]} intensity={12} distance={12} color="#ffd1b8" />
+      <pointLight position={[-4, 2.8, -3]} intensity={30} distance={17} color="#d9b5d4" />
+      <pointLight position={[3.5, 2.2, 4]} intensity={14} distance={12} color="#f4c8b8" />
 
       <CameraRig selected={selected} />
 
       {/* gallery-like architecture: concrete plinth, walls and orange identity plane */}
       <RoundedBox args={[10.2, 0.32, 8.6]} radius={0.06} smoothness={3} position={[0, 0.3, 0]} receiveShadow>
-        <meshStandardMaterial color="#171715" roughness={0.82} metalness={0.03} />
+        <meshStandardMaterial color="#c9c8d7" roughness={0.72} metalness={0.05} />
       </RoundedBox>
       <mesh position={[0, 0.465, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[10, 8.4]} />
-        <meshStandardMaterial color="#23221f" roughness={0.77} metalness={0.04} />
+        <meshStandardMaterial color="#e9e4e8" roughness={0.72} metalness={0.03} />
       </mesh>
       <mesh position={[0, 2.05, -4.12]}><boxGeometry args={[10, 3.2, 0.12]} /><meshStandardMaterial color="#d8d5ce" roughness={0.82} /></mesh>
       <mesh position={[-5, 2.05, 0]}><boxGeometry args={[0.12, 3.2, 8.3]} /><meshStandardMaterial color="#bfc0bd" roughness={0.88} /></mesh>
-      <mesh position={[2.35, 2.1, -4.02]}><boxGeometry args={[4.1, 2.55, 0.06]} /><meshStandardMaterial color="#ff4f00" roughness={0.48} emissive="#ff4f00" emissiveIntensity={0.05} /></mesh>
+      <mesh position={[2.35, 2.1, -4.02]}><boxGeometry args={[4.1, 2.55, 0.06]} /><meshStandardMaterial color="#eeb4aa" roughness={0.52} emissive="#eeb4aa" emissiveIntensity={0.04} /></mesh>
       <mesh position={[-2.9, 2.2, -4.0]}><boxGeometry args={[2.75, 1.5, 0.07]} /><meshStandardMaterial color="#111110" roughness={0.58} /></mesh>
 
       {/* ceiling rails / softbox panels */}
