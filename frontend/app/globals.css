@@ -14,9 +14,9 @@
   color-scheme: dark;
 
   /* --- DESIGN.md colors (R G B triples so Tailwind alpha utils work) --- */
-  --primary: 255 79 0;            /* studio orange */
-  --primary-hover: 255 111 46;
-  --primary-focus: 255 79 0;
+  --primary: 224 139 177;
+  --primary-hover: 238 163 197;
+  --primary-focus: 224 139 177;
   --on-primary: 255 255 255;      /* #ffffff */
   --ink: 247 248 248;             /* #f7f8f8 */
   --ink-muted: 208 214 224;       /* #d0d6e0 */
@@ -30,7 +30,7 @@
   --hairline: 52 51 47;
   --hairline-strong: 84 81 74;
   --success: 39 166 68;           /* #27a644  (DESIGN.md semantic-success) */
-  --brand-secure: 255 147 92;
+  --brand-secure: 196 151 205;
 
   --hairline-o: 1;                /* hairline opacity knob (see tailwind cfg) */
 
@@ -51,24 +51,24 @@
 /* Light theme: DESIGN.md inverse-* + ink-* only. Dark stays the reference. */
 :root[data-theme="light"] {
   color-scheme: light;
-  --primary: 126 128 174;
-  --primary-hover: 104 107 154;
-  --primary-focus: 126 128 174;
+  --primary: 218 128 169;
+  --primary-hover: 198 103 148;
+  --primary-focus: 218 128 169;
   --on-primary: 255 255 255;
-  --brand-secure: 218 142 138;
-  --panel-bg: 255 253 252;
-  --panel-a: 0.72;
-  --ink: 36 39 53;
-  --ink-muted: 66 70 91;
-  --ink-subtle: 101 105 127;
-  --ink-tertiary: 139 143 160;
-  --canvas: 230 240 247;
-  --surface-1: 255 252 250;
-  --surface-2: 246 241 245;
-  --surface-3: 236 230 241;
-  --surface-4: 226 220 235;
-  --hairline: 112 117 144;
-  --hairline-strong: 86 91 122;
+  --brand-secure: 187 143 201;
+  --panel-bg: 255 249 252;
+  --panel-a: 0.78;
+  --ink: 54 42 57;
+  --ink-muted: 91 70 91;
+  --ink-subtle: 126 96 121;
+  --ink-tertiary: 160 128 153;
+  --canvas: 250 224 236;
+  --surface-1: 255 249 252;
+  --surface-2: 250 232 241;
+  --surface-3: 243 216 231;
+  --surface-4: 235 200 220;
+  --hairline: 183 123 155;
+  --hairline-strong: 158 91 127;
   --hairline-o: 0.24;
 }
 
@@ -117,10 +117,10 @@ body::before {
     linear-gradient(90deg, transparent 0 74%, rgb(var(--primary) / 0.025) 74% 74.1%, transparent 74.1%),
     radial-gradient(80% 60% at 74% -10%, rgb(var(--primary) / 0.13), transparent 58%);
 }
-:root[data-theme="light"] body::before {
+  :root[data-theme="light"] body::before {
   opacity: .9;
   background:
-    linear-gradient(to bottom, rgb(236 246 252 / .18), rgb(255 242 236 / .32)),
+    linear-gradient(to bottom, rgb(255 232 242 / .34), rgb(247 208 227 / .52)),
     url('/studio-clouds.png') center top / cover fixed no-repeat;
 }
 body > * { position: relative; z-index: 1; }

@@ -54,6 +54,21 @@ function CloudWindow() {
   );
 }
 
+function SideWindow() {
+  return (
+    <group position={[-5.02, 0, 0]} rotation={[0, Math.PI / 2, 0]}>
+      <mesh position={[0, 2.2, -0.12]}><planeGeometry args={[8.2, 3.1]} /><meshBasicMaterial color="#c9e5f1" side={THREE.DoubleSide} toneMapped={false} /></mesh>
+      <mesh position={[0, 1.2, -0.1]}><planeGeometry args={[8.2, 1.05]} /><meshBasicMaterial color="#f4cadb" side={THREE.DoubleSide} toneMapped={false} /></mesh>
+      <mesh position={[0, 3.6, 0.08]}><boxGeometry args={[8.4, 0.28, 0.18]} /><meshStandardMaterial color="#e8dfe4" roughness={0.55} /></mesh>
+      <mesh position={[0, 0.62, 0.08]}><boxGeometry args={[8.4, 0.32, 0.22]} /><meshStandardMaterial color="#d4c7ce" roughness={0.55} /></mesh>
+      {[-4.1, -2.05, 0, 2.05, 4.1].map((z) => (
+        <mesh key={z} position={[z, 2.1, 0.1]}><boxGeometry args={[0.1, 2.78, 0.16]} /><meshStandardMaterial color="#8b8d98" metalness={0.68} roughness={0.2} /></mesh>
+      ))}
+      <mesh position={[0, 2.1, 0.14]}><planeGeometry args={[8.2, 2.7]} /><meshPhysicalMaterial color="#e7f5fa" transparent opacity={0.1} roughness={0.04} transmission={0.58} depthWrite={false} side={THREE.DoubleSide} /></mesh>
+    </group>
+  );
+}
+
 function Planter({ position }: { position: [number, number, number] }) {
   return (
     <group position={position}>
@@ -112,13 +127,13 @@ function Scene({
 }) {
   return (
     <>
-      <fog attach="fog" args={["#dfeaf2", 10, 24]} />
+      <fog attach="fog" args={["#eadce4", 14, 30]} />
       <hemisphereLight args={["#f8f1f5", "#8d91ad", 1.4]} />
-      <directionalLight position={[5, 9, 5]} intensity={2.3} color="#fff8ed" />
+      <directionalLight position={[5, 9, 5]} intensity={2.6} color="#fff8f4" />
       <directionalLight position={[-6, 5, -2]} intensity={0.9} color="#b8c2cc" />
       <spotLight position={[0, 9, 2]} angle={0.72} penumbra={0.9} intensity={80} distance={24} color="#fff6e8" />
-      <pointLight position={[-4, 2.8, -3]} intensity={30} distance={17} color="#d9b5d4" />
-      <pointLight position={[3.5, 2.2, 4]} intensity={14} distance={12} color="#f4c8b8" />
+      <pointLight position={[-4, 2.8, -3]} intensity={34} distance={17} color="#efb8d2" />
+      <pointLight position={[3.5, 2.2, 4]} intensity={18} distance={12} color="#f6c4dc" />
 
       <CameraRig selected={selected} />
 
@@ -128,23 +143,29 @@ function Scene({
       </RoundedBox>
       <mesh position={[0, 0.465, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[10, 8.4]} />
-        <meshStandardMaterial color="#e9e4e8" roughness={0.72} metalness={0.03} />
+        <meshPhysicalMaterial color="#eee7eb" roughness={0.2} metalness={0.08} clearcoat={0.72} clearcoatRoughness={0.18} />
       </mesh>
-      <mesh position={[-5, 2.05, 0]}><boxGeometry args={[0.12, 3.2, 8.3]} /><meshStandardMaterial color="#bfc0bd" roughness={0.88} /></mesh>
       <CloudWindow />
+      <SideWindow />
+
+      {/* photo-inspired ceiling, warm cove lighting and concrete core */}
+      <mesh position={[0, 3.92, 0]}><boxGeometry args={[10.2, 0.18, 8.6]} /><meshStandardMaterial color="#ded7da" roughness={0.7} /></mesh>
+      {[-3.15, 0, 3.15].map((x) => (
+        <mesh key={x} position={[x, 3.8, 0.35]} rotation={[Math.PI / 2, 0, 0]}><planeGeometry args={[1.65, 0.78]} /><meshBasicMaterial color="#fff6f8" toneMapped={false} /></mesh>
+      ))}
+      <pointLight position={[0, 3.65, 0.35]} intensity={24} distance={9} color="#ffd4e5" />
+      <mesh position={[0.1, 2.18, -2.85]}><cylinderGeometry args={[0.62, 0.7, 3.35, 40]} /><meshStandardMaterial color="#a9a2a5" roughness={0.88} metalness={0.02} /></mesh>
+      <mesh position={[0.1, 2.18, -2.85]}><cylinderGeometry args={[0.64, 0.72, 3.36, 40]} /><meshStandardMaterial color="#c7bfc3" transparent opacity={0.24} roughness={1} /></mesh>
+
+      {/* broad sunlight reflections sell the high-rise glass-room feeling */}
+      {[[-2.7, -1.45, -0.22], [0.15, -1.15, 0.12], [2.75, -1.3, -0.18]].map(([x, z, r], index) => (
+        <mesh key={index} position={[x, 0.49, z]} rotation={[-Math.PI / 2, 0, r]}><planeGeometry args={[1.25, 2.15]} /><meshBasicMaterial color="#fff3f8" transparent opacity={0.24} depthWrite={false} /></mesh>
+      ))}
 
       {/* soft furnishings and greenery keep the room from feeling like a closed set */}
-      <mesh position={[0, 0.485, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[2.2, 48]} /><meshStandardMaterial color="#d8cde1" roughness={0.96} /></mesh>
+      <mesh position={[0, 0.485, 0]} rotation={[-Math.PI / 2, 0, 0]}><circleGeometry args={[2.2, 48]} /><meshStandardMaterial color="#e8bfd2" roughness={0.96} /></mesh>
       <Planter position={[-4.3, 0.5, -3.2]} />
       <Planter position={[4.25, 0.5, -3.25]} />
-
-      {/* ceiling rails / softbox panels */}
-      {[-2.7, 0, 2.7].map((x) => (
-        <group key={x} position={[x, 3.72, -0.25]}>
-          <mesh><boxGeometry args={[0.045, 0.045, 7]} /><meshStandardMaterial color="#111" metalness={0.7} roughness={0.35} /></mesh>
-          <mesh position={[0, -0.04, 0.5]} rotation={[-Math.PI / 2, 0, 0]}><planeGeometry args={[0.7, 1.8]} /><meshStandardMaterial color="#fff8ed" emissive="#fff8ed" emissiveIntensity={1.1} toneMapped={false} /></mesh>
-        </group>
-      ))}
 
       {/* central material table creates a believable shared studio */}
       <RoundedBox args={[1.9, 0.09, 0.9]} radius={0.03} smoothness={3} position={[0, 0.54, 0]}>
