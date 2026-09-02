@@ -35,6 +35,16 @@ def test_premium_tasks_pick_a_premium_cloud_model(router):
         assert d.provider == "anthropic"
 
 
+def test_explicit_ollama_primary_wins_even_for_premium_task(full_registry, monkeypatch):
+    from app.config import get_settings
+
+    monkeypatch.setattr(get_settings(), "llm_provider", "ollama")
+    d = ModelRouter(registry=full_registry).select(agent_type="Hook Agent", task_type="hook")
+    assert d.tier == "premium"
+    assert d.selected_model == "gemma3:4b"
+    assert d.provider == "ollama"
+
+
 def test_standard_tasks_use_local_or_cheap_cloud_not_premium_first(router):
     d = router.select(agent_type="Research Agent", task_type="reference_analysis")
     assert d.tier == "standard"
