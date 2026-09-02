@@ -13,6 +13,15 @@ const QUICK_QUESTIONS: Record<AgentId, string[]> = {
   publish: ["플랫폼별 제목을 추천해줘", "언제 게시하는 게 좋아?"],
 };
 
+function validChatMessages(value: unknown): AgentChatMessage[] {
+  if (!Array.isArray(value)) return [];
+  return value.filter((row): row is AgentChatMessage => {
+    if (!row || typeof row !== "object") return false;
+    const item = row as Record<string, unknown>;
+    return (item.role === "user" || item.role === "assistant") && typeof item.content === "string";
+  }).slice(-30);
+}
+
 function fmtElapsed(s: number | null) {
   if (s == null) return "-";
   const m = Math.floor(s / 60);
@@ -46,7 +55,8 @@ export function AgentPanel({
     try {
       const saved = localStorage.getItem(`acf-agent-chat-${id}`);
       const parsed = saved ? JSON.parse(saved) : null;
-      setMessages(Array.isArray(parsed) && parsed.length ? parsed.slice(-30) : [greeting]);
+      const restored = validChatMessages(parsed);
+      setMessages(restored.length ? restored : [greeting]);
     } catch {
       setMessages([greeting]);
     }
@@ -58,7 +68,11 @@ export function AgentPanel({
   useEffect(() => endRef.current?.scrollIntoView({ behavior: "smooth" }), [messages]);
 
   useEffect(() => {
-    if (messages.length) localStorage.setItem(`acf-agent-chat-${id}`, JSON.stringify(messages.slice(-30)));
+    try {
+      if (messages.length) localStorage.setItem(`acf-agent-chat-${id}`, JSON.stringify(messages.slice(-30)));
+    } catch {
+      // Private browsing/storage restrictions must never crash the office UI.
+    }
   }, [id, messages]);
 
   async function sendText(text: string) {
@@ -94,7 +108,11 @@ export function AgentPanel({
     const greeting: AgentChatMessage = { role: "assistant", content: `새 대화를 시작합니다. ${agent.role}에게 무엇이든 물어보세요.` };
     setMessages([greeting]);
     setChatMeta(null);
-    localStorage.removeItem(`acf-agent-chat-${id}`);
+    try {
+      localStorage.removeItem(`acf-agent-chat-${id}`);
+    } catch {
+      // The in-memory conversation is still reset when browser storage is unavailable.
+    }
   }
 
   return (
