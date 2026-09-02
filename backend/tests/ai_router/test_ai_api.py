@@ -22,6 +22,15 @@ def test_agent_chat_works_in_mock_mode(_base_settings):
     assert body["reply"] and body["agent_id"] == "research" and body["mock"] is True
 
 
+def test_agent_chat_accepts_sanitized_campaign_context(_base_settings):
+    _base_settings.ollama_enabled = False
+    r = client.post("/api/agents/script/chat", json={
+        "message": "지금 작업에 맞춰 알려줘",
+        "campaign_context": {"topic": "부산 여행 숏폼", "stage": "SCRIPT", "ignored": {"secret": "x"}},
+    })
+    assert r.status_code == 200 and r.json()["agent_id"] == "script"
+
+
 def test_agent_chat_rejects_unknown_agent(_base_settings):
     r = client.post("/api/agents/unknown/chat", json={"message": "안녕"})
     assert r.status_code == 404
