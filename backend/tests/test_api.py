@@ -21,6 +21,14 @@ def test_open_source_endpoint():
     assert any(r["name"] == "whisperX" for r in rows)
 
 
+def test_agent_reach_status_is_safe_when_binary_missing(monkeypatch):
+    from app.api import routes_meta
+
+    monkeypatch.setattr(routes_meta.shutil, "which", lambda _name: None)
+    body = client.get("/api/agent-reach/status").json()
+    assert body == {"installed": False, "status": "NOT_INSTALLED", "channels": {}}
+
+
 def test_create_campaign_runs_inline_and_detail_is_complete(_base_settings):
     _base_settings.run_inline = True
     r = client.post("/api/campaigns", json={"topic": TOPIC, "audience_goal": "VIEWS",

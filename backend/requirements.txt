@@ -10,6 +10,9 @@ langgraph-checkpoint-postgres==2.0.9
 celery[redis]==5.4.0
 redis==5.2.1
 httpx==0.28.1
+# Agent Reach v1.5.0 source pinned to an audited commit. Provides yt-dlp,
+# feedparser and read-only channel health checks without browser cookies.
+agent-reach @ https://github.com/Panniantong/agent-reach/archive/da5044d26fc6adddb6554d5679c94ac22e76e428.zip
 tenacity==9.0.0
 python-dotenv==1.0.1
 anthropic==0.42.0
