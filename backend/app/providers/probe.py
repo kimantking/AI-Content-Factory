@@ -206,6 +206,12 @@ def _probe_elevenlabs(workspace_id: str | None) -> dict:
     key = cred.get_key("elevenlabs", workspace_id=workspace_id)
     if not key:
         return _result("elevenlabs", NOT_CONFIGURED, detail="no API key", workspace_id=workspace_id)
+    if not key.startswith("sk_"):
+        return _result(
+            "elevenlabs", AUTH_FAILED,
+            detail="API Key ID가 아닌 sk_로 시작하는 Secret API Key가 필요합니다.",
+            code="ELEVENLABS_INVALID_KEY_FORMAT", workspace_id=workspace_id,
+        )
     from app.providers.media._http import http_json
 
     base = s.elevenlabs_api_base.rstrip("/")

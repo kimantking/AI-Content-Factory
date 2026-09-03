@@ -80,6 +80,10 @@ export default function AIConnectionsPage() {
       setMsg("API 키가 너무 짧습니다.");
       return;
     }
+    if (p === "elevenlabs" && !key.startsWith("sk_")) {
+      setMsg("ElevenLabs의 API Key ID가 아니라 sk_로 시작하는 Secret API Key를 입력하세요.");
+      return;
+    }
     setBusy(`save:${p}`);
     setMsg("");
     try {
@@ -179,6 +183,12 @@ export default function AIConnectionsPage() {
               {r?.last4 && <span className="text-[11px] text-ink-tertiary">••••{r.last4}</span>}
             </div>
             <p className="mt-0.5 text-xs text-ink-subtle">{meta.role}</p>
+            {p === "elevenlabs" && (
+              <p className="mt-1 text-[11px] text-brand-secure">
+                API Key ID는 인증에 사용할 수 없습니다. ElevenLabs에서 한 번만 표시되는
+                <strong> sk_로 시작하는 Secret API Key</strong>를 복사해 입력하세요.
+              </p>
+            )}
 
             {isCloud ? (
               <>

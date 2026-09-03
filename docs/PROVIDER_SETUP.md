@@ -57,6 +57,10 @@ redacted everywhere (`app/ops/redaction.py`).
 
 ### ElevenLabs
 * Canonical env: **`ELEVENLABS_API_KEY`** (falls back to `TTS_API_KEY`).
+* Docker reads the repository-root **`.env`** only. Do not create or edit
+  `backend/.env`; it is excluded from the image to prevent stale secrets.
+* After changing the key on Windows, run `\.\scripts\reload-elevenlabs.ps1` to
+  validate the `sk_` secret, recreate backend/worker, and run a safe voice-list probe.
 * `TTS_PROVIDER=elevenlabs` → `ElevenLabsTTSProvider` (`/v1/text-to-speech/{voice}/
   with-timestamps`, `output_format=pcm_24000` wrapped in a 24 kHz WAV so the
   timing/subtitle/render pipeline is unchanged; duration = last alignment
