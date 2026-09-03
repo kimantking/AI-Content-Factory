@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import hashlib
 import os
 
 from app.db.base import session_scope
@@ -21,14 +20,6 @@ def classify(asset_type: str, path: str) -> str:
     if asset_type in REGENERATABLE:
         return "REGENERATABLE"
     return "REGENERATABLE"
-
-
-def _sha256(path: str) -> str:
-    h = hashlib.sha256()
-    with open(path, "rb") as f:
-        for chunk in iter(lambda: f.read(1 << 20), b""):
-            h.update(chunk)
-    return h.hexdigest()
 
 
 def scan_assets(*, limit: int = 5000, repair_status: bool = True) -> dict:

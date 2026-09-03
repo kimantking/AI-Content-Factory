@@ -24,9 +24,13 @@ venv/
 # node
 node_modules/
 .next/
+*.tsbuildinfo
 dist/
 build/
 coverage/
+
+# local backup copies (Git already keeps file history)
+*.bak
 
 # data / artifacts
 storage/
