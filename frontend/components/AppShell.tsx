@@ -52,9 +52,7 @@ const MOBILE_PRIMARY: (NavItem & { cta?: boolean })[] = [
   { href: "/create", label: "만들기", icon: "plus", cta: true },
   { href: "/governance", label: "검수", icon: "shield" },
 ];
-const MOBILE_MORE = NAV.flatMap((g) => g.items).filter(
-  (i) => !["/app", "/library", "/create", "/governance"].includes(i.href),
-);
+const MOBILE_ALL = NAV.flatMap((g) => g.items);
 
 function isActive(path: string, href: string) {
   return href === "/app" ? path === "/app" : path === href || path.startsWith(href + "/");
@@ -79,7 +77,24 @@ export default function AppShell({ children }: { children: ReactNode }) {
   }, []);
   useEffect(() => {
     setMoreOpen(false);
+    // Capture mode belongs only to the support screen. If navigation happened
+    // during HMR or an interrupted capture, never leave the global chrome hidden.
+    if (path !== "/support") document.body.classList.remove("capture-mode");
   }, [path]);
+
+  useEffect(() => {
+    if (!moreOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMoreOpen(false);
+    };
+    window.addEventListener("keydown", onEscape);
+    return () => {
+      document.body.style.overflow = previous;
+      window.removeEventListener("keydown", onEscape);
+    };
+  }, [moreOpen]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -142,7 +157,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
       {/* ---------------------------------------------------- desktop sidebar */}
       <aside
         data-chrome
-        className={`sticky top-0 hidden h-screen flex-col border-r border-hairline/70 bg-canvas/55 backdrop-blur-2xl md:flex ${
+        className={`sticky top-0 z-40 hidden h-screen flex-col border-r border-hairline/70 bg-canvas/80 backdrop-blur-2xl md:flex ${
           collapsed ? "w-[60px]" : "w-[236px]"
         } transition-[width] duration-150`}
       >
@@ -220,6 +235,29 @@ export default function AppShell({ children }: { children: ReactNode }) {
           data-chrome
           className="sticky top-0 z-30 flex h-14 items-center gap-2 bg-gradient-to-b from-canvas/90 to-canvas/0 px-3 backdrop-blur-sm sm:px-4"
         >
+          <button
+            type="button"
+            onClick={() => setMoreOpen(true)}
+            className="btn btn-ghost !h-10 !px-2 md:hidden"
+            aria-label="전체 메뉴 열기"
+            aria-expanded={moreOpen}
+          >
+            <Icon name="panel-left" size={19} />
+            <span className="hidden text-body-sm sm:inline">메뉴</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={toggleCollapse}
+            className="btn btn-ghost hidden !h-10 !px-2 md:inline-flex"
+            aria-label={collapsed ? "사이드바 펼치기" : "사이드바 접기"}
+            aria-expanded={!collapsed}
+            title={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
+          >
+            <Icon name="panel-left" size={19} />
+            <span className="hidden text-body-sm lg:inline">{collapsed ? "메뉴 펼치기" : "메뉴 접기"}</span>
+          </button>
+
           <span className="font-display text-body-sm font-semibold tracking-[-0.3px] md:hidden">
             CONTENT® STUDIO
           </span>
@@ -314,6 +352,8 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <button
           onClick={() => setMoreOpen(true)}
           className="flex min-h-[54px] flex-col items-center justify-center gap-1 text-[10px] text-ink-subtle"
+          aria-expanded={moreOpen}
+          aria-label="전체 메뉴 열기"
         >
           <Icon name="more" size={20} />
           더보기
@@ -324,21 +364,34 @@ export default function AppShell({ children }: { children: ReactNode }) {
         <div className="fixed inset-0 z-40 md:hidden" role="dialog" aria-modal="true" aria-label="전체 메뉴">
           <div className="absolute inset-0 bg-black/50" onClick={() => setMoreOpen(false)} />
           <div
-            className="absolute inset-x-0 bottom-0 rounded-t-xl border-t border-hairline bg-canvas p-4 pb-8"
+            className="absolute inset-x-0 bottom-0 max-h-[88dvh] overflow-y-auto rounded-t-2xl border-t border-hairline bg-canvas p-4 pb-[max(2rem,env(safe-area-inset-bottom))] shadow-[0_-24px_70px_rgba(47,22,37,.24)]"
             style={{ overscrollBehavior: "contain" }}
           >
-            <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-hairline-strong" />
+            <div className="mb-4 flex items-center justify-between">
+              <div>
+                <p className="text-[12px] font-medium uppercase tracking-[0.14em] text-primary">CONTENT® STUDIO</p>
+                <h2 className="mt-1 text-[20px] font-semibold text-ink">전체 메뉴</h2>
+              </div>
+              <button type="button" onClick={() => setMoreOpen(false)} className="btn btn-ghost !h-11 !px-3" aria-label="전체 메뉴 닫기">
+                <Icon name="x" size={20} />
+              </button>
+            </div>
             <div className="grid grid-cols-2 gap-2">
-              {MOBILE_MORE.map((it) => (
+              {MOBILE_ALL.map((it) => {
+                const active = isActive(path, it.href);
+                return (
                 <Link
                   key={it.href}
                   href={it.href}
-                  className="flex items-center gap-2.5 rounded-md border border-hairline px-3 py-3 text-body-sm text-ink-muted"
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => setMoreOpen(false)}
+                  className={`flex min-h-12 items-center gap-2.5 rounded-lg border px-3 py-3 text-[15px] ${active ? "border-primary/35 bg-primary/10 font-semibold text-ink" : "border-hairline bg-surface-1 text-ink-muted"}`}
                 >
-                  <Icon name={it.icon} size={17} className="text-ink-subtle" />
+                  <Icon name={it.icon} size={18} className={active ? "text-primary" : "text-ink-subtle"} />
                   {it.label}
                 </Link>
-              ))}
+                );
+              })}
             </div>
             <div className="mt-3 flex items-center justify-between border-t border-hairline pt-3">
               <ThemeToggle />
