@@ -10,6 +10,7 @@ _PRICE_PER_MTOK: dict[tuple[str, str], tuple[float, float]] = {
 
 _SEARCH_PRICE_PER_CALL: dict[str, float] = {
     "mock": 0.0,
+    "agent_reach": 0.0,  # local/read-only upstream tools
     "tavily": 0.008,  # PLACEHOLDER
 }
 

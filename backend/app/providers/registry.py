@@ -23,15 +23,37 @@ def get_llm_provider() -> LLMProvider:
 
 def get_search_provider() -> SearchProvider:
     s = get_settings()
-    if s.search_is_mock:
+    if s.mock_mode:
         return MockSearchProvider()
-    from app.providers.tavily_search import TavilySearchProvider
+    fallback = None
+    if s.search_provider == "tavily" and s.tavily_api_key:
+        from app.providers.tavily_search import TavilySearchProvider
 
-    return TavilySearchProvider(api_key=s.tavily_api_key or "")
+        fallback = TavilySearchProvider(api_key=s.tavily_api_key)
+    if s.agent_reach_enabled:
+        from app.providers.agent_reach_search import AgentReachSearchProvider
+
+        return AgentReachSearchProvider(fallback=fallback)
+    if fallback is not None:
+        return fallback
+    return MockSearchProvider()
+
+
+def get_agent_reach_provider() -> SearchProvider:
+    """Explicit provider for office research chat, with optional Tavily fallback."""
+    s = get_settings()
+    fallback = None
+    if s.tavily_api_key:
+        from app.providers.tavily_search import TavilySearchProvider
+
+        fallback = TavilySearchProvider(api_key=s.tavily_api_key)
+    from app.providers.agent_reach_search import AgentReachSearchProvider
+
+    return AgentReachSearchProvider(fallback=fallback)
 
 
 def active_mode() -> str:
     s = get_settings()
     llm = "mock" if s.llm_is_mock else s.llm_provider
-    search = "mock" if s.search_is_mock else s.search_provider
+    search = get_search_provider().name
     return f"llm={llm} search={search}"
