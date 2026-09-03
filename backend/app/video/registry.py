@@ -103,11 +103,3 @@ VIDEO_SKILLS: dict[str, VideoSkill] = {
                    quality_impact="high", status="DESIGN_ONLY"),
     ]
 }
-
-
-def get_skill(skill_id: str) -> VideoSkill | None:
-    return VIDEO_SKILLS.get(skill_id)
-
-
-def skills_by_status(status: str) -> list[VideoSkill]:
-    return [s for s in VIDEO_SKILLS.values() if s.status == status]

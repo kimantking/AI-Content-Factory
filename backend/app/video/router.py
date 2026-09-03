@@ -105,19 +105,3 @@ def route(*, platform: str, content_type: str, profile: str = "STANDARD",
         res.reasons["_profile"] = "CINEMATIC requires budget-allocator approval upstream"
     return res
 
-
-def route_video_skills(**kw) -> dict:
-    r = route(**kw)
-    return {"profile": r.profile, "required": r.required, "optional": r.optional,
-            "disabled": r.disabled, "fallbacks": r.fallbacks, "reasons": r.reasons}
-
-
-class VideoSkillRouter:
-    """OO wrapper holding fixed context (hardware, brand) across calls."""
-
-    def __init__(self, *, gpu_available: bool = False):
-        self.gpu_available = gpu_available
-
-    def route(self, **kw) -> RouteResult:
-        kw.setdefault("gpu_available", self.gpu_available)
-        return route(**kw)
