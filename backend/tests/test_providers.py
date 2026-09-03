@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from app.providers.mock_llm import MockLLMProvider
 from app.providers.mock_search import MockSearchProvider
 from app.providers.ollama_llm import OllamaLLMProvider
@@ -50,3 +52,20 @@ def test_registry_selects_ollama_as_real_primary(_base_settings):
     assert not s.llm_is_mock
     assert isinstance(provider, OllamaLLMProvider)
     assert provider.model == s.ollama_default_model
+
+
+def test_ollama_plain_text_chat_is_wrapped_as_valid_json(monkeypatch):
+    from app.providers.ollama_llm import OllamaLLMProvider
+
+    provider = OllamaLLMProvider(model="gemma3:4b")
+    captured = {}
+
+    def fake_request(_path, payload):
+        captured.update(payload)
+        return {"message": {"content": "긴 대본도 그대로 반환합니다."}}
+
+    monkeypatch.setattr(provider, "_request", fake_request)
+    response = provider.complete(system="대본 전문가", user="대본 작성", task="agent_chat",
+                                 context={"plain_text": True, "max_tokens": 1400})
+    assert json.loads(response.text) == {"reply": "긴 대본도 그대로 반환합니다."}
+    assert "format" not in captured

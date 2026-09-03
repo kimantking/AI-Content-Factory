@@ -109,22 +109,31 @@ class OllamaLLMProvider:
     def complete(self, *, system: str, user: str, task: str, context: dict) -> LLMResponse:
         """Structured completion. Uses Ollama's `format:"json"` to force a JSON
         object, matching the cloud adapters' contract."""
+        plain_text = bool(context.get("plain_text"))
         payload = {
             "model": self.model,
             "stream": False,
-            "format": "json",
             "options": {"temperature": float(context.get("temperature", 0.4)),
                         "num_predict": int(context.get("max_tokens", 1200))},
             "messages": [
                 {"role": "system",
-                 "content": (system or "") + "\n\nRespond with a single valid JSON object only."},
+                 "content": (system or "") + ("" if plain_text else "\n\nRespond with a single valid JSON object only.")},
                 {"role": "user", "content": user},
             ],
         }
+        if not plain_text:
+            payload["format"] = "json"
         started = time.monotonic()
         data = self._request("/api/chat", payload)
         elapsed = time.monotonic() - started
         text = (data.get("message", {}) or {}).get("content", "").strip()
+        if plain_text:
+            if not text:
+                raise InvalidOutputError(f"empty ollama output for task={task}")
+            # The router expects structured JSON. Chat answers are generated as
+            # natural text so long scripts cannot become invalid when a model
+            # stops at its token limit; the application performs the wrapping.
+            text = json.dumps({"reply": text}, ensure_ascii=False)
         if text.startswith("```"):
             text = text.strip("`")
             text = text[text.find("{"):] if "{" in text else text

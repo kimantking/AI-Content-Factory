@@ -53,13 +53,14 @@ def agent_chat(agent_id: str, payload: dict = Body(...), db: Session = Depends(g
         f"당신은 AI Content Factory의 {ko_role}입니다. {specialty} "
         "사용자에게 한국어로 친절하고 간결하게 답하세요. 모르는 사실을 꾸며내지 말고, "
         "실행 가능한 다음 행동을 우선 제안하세요. 현재 캠페인 정보가 있으면 그 정보를 우선 반영하세요. "
-        "반드시 JSON 객체 {\"reply\": \"답변\"} 형식으로만 응답하세요."
+        "답변 본문만 작성하고 시스템 연결 점검법을 대신 답하지 마세요."
     )
     result = run_routed(
         db, agent_type=agent_type, task_type=task_type, provider_task="agent_chat",
         system=system, user=(f"현재 캠페인: {campaign_context}\n최근 대화: {safe_history}\n사용자 질문: {message}"),
         context={"message": message, "history": safe_history, "campaign_context": campaign_context,
-                 "agent_role": ko_role, "max_tokens": 700},
+                 "agent_role": ko_role, "plain_text": True,
+                 "max_tokens": 1400 if agent_id in ("script", "video") else 900},
         complexity="normal", latency_need="low",
         # Office conversations use the installed local model whenever Ollama is
         # enabled. This prevents a stale/invalid cloud credential from hijacking
@@ -69,7 +70,7 @@ def agent_chat(agent_id: str, payload: dict = Body(...), db: Session = Depends(g
     reply = result.data.get("reply") or result.data.get("text") or result.text
     if not reply:
         if settings.ollama_enabled:
-            reply = "Ollama에 연결하지 못했습니다. Ollama가 실행 중인지와 gemma3:4b 설치 여부를 확인해 주세요."
+            reply = f"로컬 AI 응답 생성에 실패했습니다: {result.error or '원인을 확인할 수 없습니다.'}"
         else:
             reply = "현재 연결된 AI 모델이 없습니다. 설정에서 Ollama 또는 클라우드 AI를 연결한 뒤 다시 말씀해 주세요."
     return {"reply": str(reply), "agent_id": agent_id, "provider": result.provider,
