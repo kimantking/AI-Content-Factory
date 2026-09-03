@@ -59,53 +59,49 @@ def _connected_via_vault(v: dict) -> bool:
     return bool(v) and v.get("status") == "CONNECTED" and bool(v.get("last_success_at"))
 
 
-def _anthropic() -> dict:
-    s = get_settings()
-    v = _vault("anthropic")
-    base = {"provider": "anthropic", "role": "cloud LLM", "model": s.anthropic_model}
+_COMMON_FAILURES = frozenset({"AUTH_FAILED", "RATE_LIMITED", "BLOCKED", "ERROR"})
+
+
+def _keyed_status(provider: str, env_attr: str, base: dict, *, mock: bool,
+                  failures: set[str] | frozenset[str], connected_note: str,
+                  mock_note: str = "key present but MOCK_MODE is on") -> dict:
+    """Build the shared credential state without ever exposing the key."""
+    v = _vault(provider)
     if v.get("last4"):
         base["last4"] = v["last4"]
-    key = _resolved_key("anthropic", "anthropic_api_key")
-    if not key:
+    if not _resolved_key(provider, env_attr):
         return {**base, "status": "NOT_CONFIGURED"}
     if _connected_via_vault(v):
         return {**base, "status": "CONNECTED", "key_present": True,
                 "last_success_at": v["last_success_at"], "last_checked_at": v.get("last_checked_at"),
-                "note": "verified by a minimal live probe"}
-    if v.get("status") in ("AUTH_FAILED", "RATE_LIMITED", "BILLING", "MODEL_UNAVAILABLE",
-                           "NEEDS_WORKSPACE_ID", "BLOCKED", "ERROR"):
+                "note": connected_note}
+    if v.get("status") in failures:
         return {**base, "status": v["status"], "key_present": True,
                 "last_error_code": v.get("last_error_code"),
                 "last_checked_at": v.get("last_checked_at")}
-    if s.llm_is_mock:                       # mock_mode or llm_provider=mock
-        return {**base, "status": "MOCK", "key_present": True,
-                "note": "key present but MOCK_MODE is on — no paid call is made"}
+    if mock:
+        return {**base, "status": "MOCK", "key_present": True, "note": mock_note}
     return {**base, "status": "CONFIGURED", "key_present": True,
             "note": "key present; run [연결 확인] for a live probe"}
+
+
+def _anthropic() -> dict:
+    s = get_settings()
+    base = {"provider": "anthropic", "role": "cloud LLM", "model": s.anthropic_model}
+    return _keyed_status(
+        "anthropic", "anthropic_api_key", base, mock=s.llm_is_mock,
+        failures=_COMMON_FAILURES | {"BILLING", "MODEL_UNAVAILABLE", "NEEDS_WORKSPACE_ID"},
+        connected_note="verified by a minimal live probe",
+        mock_note="key present but MOCK_MODE is on — no paid call is made")
 
 
 def _tavily() -> dict:
     s = get_settings()
-    v = _vault("tavily")
     base = {"provider": "tavily", "role": "search"}
-    if v.get("last4"):
-        base["last4"] = v["last4"]
-    key = _resolved_key("tavily", "tavily_api_key")
-    if not key:
-        return {**base, "status": "NOT_CONFIGURED"}
-    if _connected_via_vault(v):
-        return {**base, "status": "CONNECTED", "key_present": True,
-                "last_success_at": v["last_success_at"], "last_checked_at": v.get("last_checked_at"),
-                "note": "verified by a minimal live search probe"}
-    if v.get("status") in ("AUTH_FAILED", "RATE_LIMITED", "QUOTA", "BLOCKED", "ERROR"):
-        return {**base, "status": v["status"], "key_present": True,
-                "last_error_code": v.get("last_error_code"),
-                "last_checked_at": v.get("last_checked_at")}
-    if s.search_is_mock:
-        return {**base, "status": "MOCK", "key_present": True,
-                "note": "key present but MOCK_MODE is on"}
-    return {**base, "status": "CONFIGURED", "key_present": True,
-            "note": "key present; run [연결 확인] for a live probe"}
+    return _keyed_status(
+        "tavily", "tavily_api_key", base, mock=s.search_is_mock,
+        failures=_COMMON_FAILURES | {"QUOTA"},
+        connected_note="verified by a minimal live search probe")
 
 
 def _ollama() -> dict:

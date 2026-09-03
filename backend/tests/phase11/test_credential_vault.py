@@ -75,8 +75,8 @@ def test_db_key_overrides_env(_base_settings):
 
 def test_workspace_isolation():
     from app.providers import credentials as cred
-    cred.set_key("elevenlabs", "instance-key-000000", workspace_id="")
-    cred.set_key("elevenlabs", "ws-A-key-1111111111", workspace_id="ws-A")
+    cred.set_key("elevenlabs", "sk_instance-key-000000", workspace_id="")
+    cred.set_key("elevenlabs", "sk_ws-A-key-1111111111", workspace_id="ws-A")
 
     assert cred.get_key("elevenlabs", workspace_id="ws-A") == "ws-A-key-1111111111"
     # ws-B has no own key -> falls back to the instance one, NEVER ws-A's
@@ -223,6 +223,13 @@ def test_probe_result_carries_no_secret(_base_settings, monkeypatch):
 # --------------------------------------------------------------------------- #
 #  status.py / snapshot visibility
 # --------------------------------------------------------------------------- #
+
+def test_elevenlabs_rejects_api_key_id_before_storage(_base_settings):
+    from app.providers import credentials as cred
+
+    with pytest.raises(ValueError, match="API Key ID"):
+        cred.set_key("elevenlabs", "api-key-id-f6af", workspace_id="")
+
 
 def test_status_reports_connected_after_successful_probe(_base_settings):
     from app.providers import credentials as cred

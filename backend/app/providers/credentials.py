@@ -27,6 +27,10 @@ _ENV_ATTR = {
     "elevenlabs": "elevenlabs_api_key",
 }
 
+_KEY_PREFIX = {
+    "elevenlabs": ("sk_",),
+}
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -43,6 +47,24 @@ def _valid(provider: str) -> None:
 
 def _last4(key: str) -> str:
     return key[-4:] if key and len(key) >= 4 else ""
+
+
+def validate_key(provider: str, api_key: str) -> str:
+    """Normalize a key and reject identifiers pasted in place of secrets."""
+    _valid(provider)
+    key = (api_key or "").strip()
+    if len(key) < 8:
+        raise ValueError("API key looks too short")
+    prefixes = _KEY_PREFIX.get(provider, ())
+    if prefixes and not key.startswith(prefixes):
+        expected = " or ".join(prefixes)
+        if provider == "elevenlabs":
+            raise ValueError(
+                "ElevenLabs API Key ID는 사용할 수 없습니다. "
+                f"Secret API Key({expected}로 시작)를 입력하세요."
+            )
+        raise ValueError(f"{provider} API key must start with {expected}")
+    return key
 
 
 # --------------------------------------------------------------------------- #
@@ -116,10 +138,7 @@ def _iso(dt: datetime | None) -> str | None:
 
 def set_key(provider: str, api_key: str, *, workspace_id: str | None = None,
             actor: str = "user") -> dict:
-    _valid(provider)
-    api_key = (api_key or "").strip()
-    if len(api_key) < 8:
-        raise ValueError("API key looks too short")
+    api_key = validate_key(provider, api_key)
     ws = _norm_ws(workspace_id)
     with session_scope() as s:
         row = s.get(ProviderCredential, (provider, ws))
