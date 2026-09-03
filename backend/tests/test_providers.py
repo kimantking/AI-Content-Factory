@@ -54,6 +54,19 @@ def test_registry_selects_ollama_as_real_primary(_base_settings):
     assert provider.model == s.ollama_default_model
 
 
+def test_registry_selects_agent_reach_as_real_search(_base_settings):
+    from app.providers.agent_reach_search import AgentReachSearchProvider
+
+    s = _base_settings
+    s.mock_mode = False
+    s.agent_reach_enabled = True
+    s.search_provider = "tavily"
+    s.tavily_api_key = None
+    provider = get_search_provider()
+    assert not s.search_is_mock
+    assert isinstance(provider, AgentReachSearchProvider)
+
+
 def test_ollama_plain_text_chat_is_wrapped_as_valid_json(monkeypatch):
     from app.providers.ollama_llm import OllamaLLMProvider
 

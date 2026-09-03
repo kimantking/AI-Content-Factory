@@ -283,7 +283,11 @@ class Settings(BaseSettings):
 
     @property
     def search_is_mock(self) -> bool:
-        return self.search_provider == "mock" or self.mock_mode or not self.tavily_api_key
+        if self.mock_mode:
+            return True
+        if self.agent_reach_enabled:
+            return False
+        return self.search_provider == "mock" or not self.tavily_api_key
 
     def media_provider_key(self, kind: str) -> str | None:
         """The API key for the configured media provider of `kind`, resolving the

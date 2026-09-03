@@ -49,17 +49,32 @@ def agent_chat(agent_id: str, payload: dict = Body(...), db: Session = Depends(g
         "campaign_id": str(campaign_context.get("campaign_id") or "")[:120],
     }
     agent_type, task_type, ko_role, specialty = _AGENT_CHAT[agent_id]
+    live_sources = []
+    if agent_id == "research" and settings.agent_reach_enabled and not settings.mock_mode:
+        try:
+            from app.providers.registry import get_agent_reach_provider
+
+            live_sources = get_agent_reach_provider().search(message, max_results=6)
+        except Exception:  # research chat still answers if every external channel is temporarily down
+            live_sources = []
+    source_context = [
+        {"title": row.title, "url": row.url, "snippet": row.snippet,
+         "published_at": row.published_at}
+        for row in live_sources
+    ]
     system = (
         f"당신은 AI Content Factory의 {ko_role}입니다. {specialty} "
         "사용자에게 한국어로 친절하고 간결하게 답하세요. 모르는 사실을 꾸며내지 말고, "
         "실행 가능한 다음 행동을 우선 제안하세요. 현재 캠페인 정보가 있으면 그 정보를 우선 반영하세요. "
-        "답변 본문만 작성하고 시스템 연결 점검법을 대신 답하지 마세요."
+        "답변 본문만 작성하고 시스템 연결 점검법을 대신 답하지 마세요. "
+        "제공된 실제 출처가 있으면 그 URL만 인용하고 존재하지 않는 출처를 만들지 마세요."
     )
     result = run_routed(
         db, agent_type=agent_type, task_type=task_type, provider_task="agent_chat",
-        system=system, user=(f"현재 캠페인: {campaign_context}\n최근 대화: {safe_history}\n사용자 질문: {message}"),
+        system=system, user=(f"현재 캠페인: {campaign_context}\n최근 대화: {safe_history}\n"
+                             f"Agent Reach 실제 출처: {source_context}\n사용자 질문: {message}"),
         context={"message": message, "history": safe_history, "campaign_context": campaign_context,
-                 "agent_role": ko_role, "plain_text": True,
+                 "agent_role": ko_role, "plain_text": True, "sources": source_context,
                  "max_tokens": 1400 if agent_id in ("script", "video") else 900},
         complexity="normal", latency_need="low",
         # Office conversations use the installed local model whenever Ollama is
@@ -74,7 +89,9 @@ def agent_chat(agent_id: str, payload: dict = Body(...), db: Session = Depends(g
         else:
             reply = "현재 연결된 AI 모델이 없습니다. 설정에서 Ollama 또는 클라우드 AI를 연결한 뒤 다시 말씀해 주세요."
     return {"reply": str(reply), "agent_id": agent_id, "provider": result.provider,
-            "model": result.model_id, "mock": result.provider == "mock", "error": result.error}
+            "model": result.model_id, "mock": result.provider == "mock", "error": result.error,
+            "research_provider": "agent_reach" if live_sources else None,
+            "sources": source_context}
 
 
 @router.get("/local-ai/status")
