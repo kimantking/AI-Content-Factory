@@ -133,7 +133,7 @@ class MockLLMProvider:
         lines = [
             hook,
             "",
-            f"먼저 사실부터 짚겠습니다.",
+            "먼저 사실부터 짚겠습니다.",
         ]
         for f in facts[:5]:
             lines.append(f"- {f}")

@@ -8,7 +8,7 @@ from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.analytics.embedding import cosine, embed
-from app.db.models import Campaign, PlatformContent
+from app.db.models import Campaign
 from app.db.models_mb import Brand, Channel, ContentPillar, ContentRoutingDecision
 
 _ROUTING_WEIGHTS = {

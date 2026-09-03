@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import statistics
-from collections import Counter, defaultdict
+from collections import defaultdict
 from datetime import datetime, timezone
 
 from sqlalchemy import func

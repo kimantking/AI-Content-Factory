@@ -9,7 +9,6 @@ from app.db.models import (
     AutopilotRun,
     Campaign,
     PeriodReport,
-    Publication,
     RawTrendEvent,
     TopicCandidate,
     TrendSource,

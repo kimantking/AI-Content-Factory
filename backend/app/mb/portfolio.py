@@ -12,7 +12,6 @@ import statistics
 from sqlalchemy.orm import Session
 
 from app.db.models_mb import (
-    Brand,
     Channel,
     ChannelHealthSnapshot,
     PortfolioDecision,

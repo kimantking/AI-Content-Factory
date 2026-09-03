@@ -12,7 +12,6 @@ from app.db.models import (
     AutopilotDecision,
     Campaign,
     LearningMemory,
-    PublishJob,
     TopicCandidate,
 )
 

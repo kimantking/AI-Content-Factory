@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 
-from app.db.models import ContentFeature, ContentRecipe, LearningMemory, PerformanceScore
+from app.db.models import ContentFeature, ContentRecipe, LearningMemory
 
 
 def build_recipes(session, objective: str = "BALANCED") -> int:

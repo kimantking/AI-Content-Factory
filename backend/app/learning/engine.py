@@ -5,7 +5,7 @@ from collections import defaultdict
 
 from app.analytics.embedding import cosine
 from app.config import get_settings
-from app.db.models import ContentFeature, LearningMemory, PerformanceScore
+from app.db.models import ContentFeature, PerformanceScore
 from app.learning.memory import upsert_memory
 
 # Learning Agent principles (enforced structurally, not just in a prompt):

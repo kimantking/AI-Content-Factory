@@ -13,7 +13,6 @@ from __future__ import annotations
 import hashlib
 import re
 from html.parser import HTMLParser
-from html import unescape
 
 _DROP_TAGS = {"script", "style", "noscript", "svg", "iframe", "form", "button",
               "nav", "footer", "aside", "header"}

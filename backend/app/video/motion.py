@@ -25,10 +25,10 @@ def zoompan_expr(motion: str, frames: int, w: int, h: int, *, fps: int = _FPS) -
 
     if m in ("DOLLY_IN_SIM", "SUBJECT_PUSH"):
         # accelerating push toward centre — subtle, capped
-        z = f"'min(zoom+0.0016,1.20)'"
+        z = "'min(zoom+0.0016,1.20)'"
         x, y = "'iw/2-(iw/zoom/2)'", "'ih/2-(ih/zoom/2)'"
     elif m == "DOLLY_OUT_SIM":
-        z = f"'if(lte(on,1),1.20,max(1.001,zoom-0.0013))'"
+        z = "'if(lte(on,1),1.20,max(1.001,zoom-0.0013))'"
         x, y = "'iw/2-(iw/zoom/2)'", "'ih/2-(ih/zoom/2)'"
     elif m == "DEPTH_PARALLAX_SIM":
         # simulate parallax: hold a mild zoom while drifting the crop diagonally,

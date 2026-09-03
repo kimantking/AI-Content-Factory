@@ -17,8 +17,8 @@ from app.governance import disclosure as _disc
 from app.governance import identity as _ident
 from app.governance import originality as _orig
 from app.governance import policy as _policy
-from app.governance.decision import GOV_STATES, decide, valid_transition
-from app.governance.rights import AUTO_SAFE_STATUS, platform_allows
+from app.governance.decision import decide
+from app.governance.rights import platform_allows
 
 
 def _sub(engine: str, decision: str, *, codes=None, reqs=None, hard=False, sev="MEDIUM", detail=None):

@@ -4,7 +4,6 @@ the final render, not the plan. Persisted so it survives asset-cache cleanup.
 from __future__ import annotations
 
 import hashlib
-import os
 
 from sqlalchemy.orm import Session
 

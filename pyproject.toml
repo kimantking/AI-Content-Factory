@@ -1,0 +1,21 @@
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+extend-exclude = [
+    "backend/alembic/versions",
+    "backend/scripts",
+]
+
+[tool.ruff.lint]
+# Start with correctness checks that are safe for the existing application.
+# Complexity and framework-aware dead-code checks are introduced incrementally.
+select = ["E4", "E7", "E9", "F"]
+ignore = [
+    "E741",  # Legacy single-letter comprehensions; rename in focused refactors.
+    "F841",  # Some assignments document staged pipeline values; review manually.
+]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"

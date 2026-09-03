@@ -6,7 +6,6 @@ Data volume is not quality (spec §AF). A low-scoring reference gets a low
 from __future__ import annotations
 
 import hashlib
-import math
 import re
 from datetime import datetime, timezone
 

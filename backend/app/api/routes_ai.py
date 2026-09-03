@@ -9,7 +9,7 @@ from app.ai_router.cost import estimate_campaign_cost
 from app.ai_router.execute import run_routed
 from app.ai_router.registry import get_registry, reset_registry_cache
 from app.ai_router.router import ModelRouter
-from app.ai_router.telemetry import performance_hint, recompute_performance
+from app.ai_router.telemetry import recompute_performance
 from app.config import get_settings
 from app.db.base import get_db
 from app.db.models_p8 import ModelPerformance, ModelRoutingEvent

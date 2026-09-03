@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from app.auth.context import AuthContext
-from app.auth.deps import current_user, require_role, require_workspace
+from app.auth.deps import current_user, require_role
 from app.auth.service import add_member
 from app.db.base import get_db
 from app.db.models_mb import (
@@ -15,7 +15,6 @@ from app.db.models_mb import (
     Channel,
     ContentPillar,
     Workspace,
-    WorkspaceMember,
 )
 from app.mb import budget as _budget
 from app.mb import channel_manager as _cm

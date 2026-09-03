@@ -4,7 +4,7 @@ cloud models are ENABLED only when a key is configured.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from functools import lru_cache
 
 from app.ai_router.pricing import price_for

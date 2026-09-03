@@ -12,7 +12,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.ai_router.pricing import USD_KRW, cost_of
+from app.ai_router.pricing import USD_KRW
 from app.ai_router.router import ModelRouter
 from app.config import get_settings
 

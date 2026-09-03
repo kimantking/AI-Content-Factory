@@ -4,7 +4,7 @@ import os
 
 from app.agents.media_runner import run_media_pipeline
 from app.db.base import session_scope
-from app.db.models import Asset, Campaign, PlatformContent, Scene
+from app.db.models import Asset, PlatformContent, Scene
 from app.platforms import get_platform
 from app.providers.media import get_storage
 

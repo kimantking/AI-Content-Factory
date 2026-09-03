@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 from app.config import get_settings
 from app.db.base import get_db
 from app.db.models import Asset, Campaign, CostLog, PlatformContent, Scene
-from app.platforms import PLATFORMS, get_platform
+from app.platforms import PLATFORMS
 
 router = APIRouter(prefix="/api", tags=["media"])
 
