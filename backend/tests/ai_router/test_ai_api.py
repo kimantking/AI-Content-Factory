@@ -36,6 +36,30 @@ def test_agent_chat_rejects_unknown_agent(_base_settings):
     assert r.status_code == 404
 
 
+def test_agent_chat_uses_local_only_routing_when_ollama_enabled(_base_settings, monkeypatch):
+    from app.api import routes_ai
+
+    captured = {}
+
+    class Result:
+        data = {"reply": "로컬 응답"}
+        text = ""
+        provider = "ollama"
+        model_id = "gemma3:4b"
+        error = None
+
+    def fake_run(*_args, **kwargs):
+        captured.update(kwargs)
+        return Result()
+
+    _base_settings.ollama_enabled = True
+    monkeypatch.setattr(routes_ai, "run_routed", fake_run)
+    r = client.post("/api/agents/research/chat", json={"message": "테스트"})
+    assert r.status_code == 200
+    assert r.json()["provider"] == "ollama"
+    assert captured["privacy"] == "local_only"
+
+
 def test_local_ai_status_reports_not_running_when_unreachable(_base_settings):
     _base_settings.ollama_enabled = True
     _base_settings.ollama_base_url = "http://127.0.0.1:59998"

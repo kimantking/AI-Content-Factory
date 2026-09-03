@@ -26,6 +26,7 @@ _AGENT_CHAT = {
 
 @router.post("/agents/{agent_id}/chat")
 def agent_chat(agent_id: str, payload: dict = Body(...), db: Session = Depends(get_db)):
+    settings = get_settings()
     if agent_id not in _AGENT_CHAT:
         from fastapi import HTTPException
         raise HTTPException(status_code=404, detail="unknown agent")
@@ -59,11 +60,18 @@ def agent_chat(agent_id: str, payload: dict = Body(...), db: Session = Depends(g
         system=system, user=(f"현재 캠페인: {campaign_context}\n최근 대화: {safe_history}\n사용자 질문: {message}"),
         context={"message": message, "history": safe_history, "campaign_context": campaign_context,
                  "agent_role": ko_role, "max_tokens": 700},
-        complexity="normal", latency_need="low")
+        complexity="normal", latency_need="low",
+        # Office conversations use the installed local model whenever Ollama is
+        # enabled. This prevents a stale/invalid cloud credential from hijacking
+        # the chat route and makes the four agents usable without paid APIs.
+        privacy="local_only" if settings.ollama_enabled else "normal")
     db.commit()
     reply = result.data.get("reply") or result.data.get("text") or result.text
     if not reply:
-        reply = "현재 연결된 AI 모델이 없습니다. 설정에서 Ollama 또는 클라우드 AI를 연결한 뒤 다시 말씀해 주세요."
+        if settings.ollama_enabled:
+            reply = "Ollama에 연결하지 못했습니다. Ollama가 실행 중인지와 gemma3:4b 설치 여부를 확인해 주세요."
+        else:
+            reply = "현재 연결된 AI 모델이 없습니다. 설정에서 Ollama 또는 클라우드 AI를 연결한 뒤 다시 말씀해 주세요."
     return {"reply": str(reply), "agent_id": agent_id, "provider": result.provider,
             "model": result.model_id, "mock": result.provider == "mock", "error": result.error}
 
