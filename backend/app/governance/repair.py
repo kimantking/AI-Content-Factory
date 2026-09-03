@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
-from app.db.models import Asset, Scene
+from app.db.models import Asset
 from app.db.models_gov import GovernanceEvent, RightsLedger
 from app.governance.attribution import build_attribution_package
 from app.governance.rights import record_asset_rights

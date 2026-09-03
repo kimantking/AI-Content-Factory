@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from datetime import datetime, timezone
-from functools import lru_cache
 
 # DB-backed operational flags. These MUST survive a process restart —
 # EMERGENCY_STOP is the canonical example (Phase 4 must not auto-clear).

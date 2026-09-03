@@ -16,7 +16,7 @@ policy pages (that stays NEEDS_PRODUCTION_ENVIRONMENT). It:
 """
 from __future__ import annotations
 
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 from sqlalchemy.orm import Session
 

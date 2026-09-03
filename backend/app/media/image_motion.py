@@ -27,7 +27,7 @@ def _zoompan_expr(motion: str, frames: int, w: int, h: int) -> str:
     d = max(1, frames)
     m = motion.upper() if motion else "SLOW_ZOOM_IN"
     if m == "SLOW_ZOOM_OUT":
-        z = f"'if(lte(on,1),1.12,max(1.001,zoom-0.0009))'"
+        z = "'if(lte(on,1),1.12,max(1.001,zoom-0.0009))'"
         x, y = "'iw/2-(iw/zoom/2)'", "'ih/2-(ih/zoom/2)'"
     elif m == "PAN_LEFT":
         z, x, y = "1.12", f"'(iw-iw/zoom)*(1-on/{d})'", "'ih/2-(ih/zoom/2)'"

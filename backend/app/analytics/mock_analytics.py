@@ -5,7 +5,6 @@ import math
 from datetime import datetime, timezone
 
 from app.analytics.base import Availability, MetricValue, PostMetrics
-from app.analytics.capabilities import get_analytics_capability
 from app.analytics.faults import analytics_faults
 from app.analytics.metric_catalog import normalize, platform_map
 

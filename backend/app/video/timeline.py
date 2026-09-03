@@ -7,7 +7,7 @@ timebase so fps conversion doesn't drift.
 """
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 from app.video.schema import TimelineClip, VideoTimeline
 

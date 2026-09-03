@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import os
-from pathlib import Path
 
 from app.agents.media_state import MediaState
 from app.config import get_settings
@@ -46,7 +45,6 @@ from app.providers.media import (
     get_storage,
 )
 from app.providers.media.cache import AssetCache, asset_hash
-from app.providers.media.mock_tts import estimate_seconds
 # LLM access goes through app.agents.model_gateway (AUDIT-P8-001) — no direct provider here
 from app.schemas.media import ChartSpec, VisualType
 from app.services.budget import check_media_budget

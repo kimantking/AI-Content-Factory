@@ -15,7 +15,6 @@ from app.db.models import (
     AutopilotDecision,
     AutopilotRun,
     CostLog,
-    RawTrendEvent,
     TopicCandidate,
     TopicRejection,
     TrendSource,

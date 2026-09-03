@@ -65,7 +65,7 @@ def placeholder_card(
 ):
     """A clearly-labelled MOCK image (Design/Amendment rule: never disguise a mock
     as a real generation)."""
-    from PIL import Image, ImageDraw
+    from PIL import ImageDraw
 
     img = gradient_bg(w, h, seed).convert("RGB")
     d = ImageDraw.Draw(img)

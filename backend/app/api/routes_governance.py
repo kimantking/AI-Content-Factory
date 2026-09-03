@@ -8,7 +8,6 @@ from app.auth.deps import current_user
 from app.db.base import get_db
 from app.db.models import Campaign
 from app.db.models_gov import (
-    ContentFingerprint,
     CopyrightClaim,
     GovernanceCase,
     RightsLedger,

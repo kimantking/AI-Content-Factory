@@ -18,9 +18,7 @@ from sqlalchemy.orm import Session
 
 from app.config import get_settings
 from app.db.models_learn import (
-    DatasetRecord,
     LearningJob,
-    PromptBlueprint,
     ReferenceAnalysis,
     ReferenceChunk,
     ReferenceSource,

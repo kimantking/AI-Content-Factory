@@ -8,7 +8,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from app.video.registry import VIDEO_SKILLS, VideoSkill
+from app.video.registry import VIDEO_SKILLS
 
 QUALITY_PROFILES = ("FAST", "STANDARD", "PREMIUM", "CINEMATIC")
 

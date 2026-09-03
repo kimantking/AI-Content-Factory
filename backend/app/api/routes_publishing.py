@@ -11,7 +11,6 @@ from app.db.base import get_db
 from app.db.models import (
     Campaign,
     PlatformAccount,
-    Publication,
     PublicationEvent,
     PublishJob,
 )

@@ -18,7 +18,6 @@ from sqlalchemy.orm import Session
 from app.analytics.embedding import cosine, embed
 from app.config import get_settings
 from app.db.models_gov import ContentFingerprint, SimilarityResult
-from app.governance import phash as _phash
 
 _WORD = re.compile(r"[\w가-힣]+")
 _STOP = {"그리고", "그러나", "하지만", "the", "a", "of", "및", "수", "것", "이", "가", "은", "는", "에", "를", "을"}

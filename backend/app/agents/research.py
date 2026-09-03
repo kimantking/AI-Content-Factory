@@ -8,7 +8,7 @@ researcher; no dependency added.
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from urllib.parse import urlparse
 
 from app.analytics.embedding import cosine, embed

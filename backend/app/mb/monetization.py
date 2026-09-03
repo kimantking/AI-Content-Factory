@@ -12,7 +12,7 @@ from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db.models import Campaign, RevenueEntry
-from app.db.models_mb import Brand, Channel, SponsorDeal
+from app.db.models_mb import Channel
 
 REVENUE_MODELS = ("PLATFORM_AD_REVENUE", "AFFILIATE", "SPONSOR", "PRODUCT",
                   "SERVICE_LEAD", "MEMBERSHIP", "OTHER")
