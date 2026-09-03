@@ -49,9 +49,9 @@ export function OfficeStage({ snap, overlay }: { snap: SupportSnapshot | null; o
               type="button"
               aria-label="에이전트 대화창 닫기"
               onClick={() => setSelected(null)}
-              className="absolute inset-0 z-20 cursor-default bg-[#2d1723]/20 backdrop-blur-[1px]"
+              className="fixed inset-0 z-[90] cursor-default bg-[#2d1723]/25 backdrop-blur-[2px] sm:absolute sm:z-20"
             />
-            <div className="absolute inset-x-0 bottom-0 z-40 flex justify-center p-3 sm:inset-auto sm:right-6 sm:top-4 sm:block sm:p-0">
+            <div className="fixed inset-0 z-[100] flex justify-center sm:absolute sm:inset-auto sm:right-6 sm:top-4 sm:z-40 sm:block">
               <AgentPanel id={selected} model={model} onClose={() => setSelected(null)} />
             </div>
           </>
