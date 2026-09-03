@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, Fragment, ReactNode, useEffect, useRef, useState } from "react";
 import { AGENTS, STATE_META, type AgentId, type OfficeModel } from "./office-data";
 import { Icon } from "@/components/ui/Icon";
 import { chatWithAgent, type AgentChatMessage } from "@/lib/api";
@@ -41,6 +41,41 @@ function fmtElapsed(s: number | null) {
   if (s == null) return "-";
   const m = Math.floor(s / 60);
   return m > 0 ? `${m}분 ${Math.round(s % 60)}초` : `${Math.round(s)}초`;
+}
+
+function inlineMarkup(text: string): ReactNode[] {
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\(https?:\/\/[^)]+\))/g);
+  return parts.map((part, index) => {
+    const link = part.match(/^\[([^\]]+)\]\((https?:\/\/[^)]+)\)$/);
+    if (link) {
+      return <a key={index} href={link[2]} target="_blank" rel="noreferrer" className="font-medium text-primary underline decoration-primary/35 underline-offset-2 hover:decoration-primary">{link[1]}</a>;
+    }
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={index} className="font-semibold text-ink">{part.slice(2, -2)}</strong>;
+    }
+    if (part.startsWith("`") && part.endsWith("`")) {
+      return <code key={index} className="rounded bg-primary/10 px-1.5 py-0.5 font-mono text-[0.9em] text-ink">{part.slice(1, -1)}</code>;
+    }
+    return <Fragment key={index}>{part}</Fragment>;
+  });
+}
+
+function StructuredAnswer({ content }: { content: string }) {
+  return (
+    <div className="space-y-2.5 break-words text-left text-[15px] leading-7 text-ink sm:text-[16px]">
+      {content.split(/\r?\n/).map((raw, index) => {
+        const line = raw.trim();
+        if (!line) return <div key={index} className="h-1" aria-hidden="true" />;
+        const heading = line.match(/^#{1,3}\s+(.+)$/) || line.match(/^\*\*(.+)\*\*$/);
+        if (heading) return <h4 key={index} className="pt-1 text-[16px] font-bold leading-6 text-ink sm:text-[17px]">{inlineMarkup(heading[1])}</h4>;
+        const bullet = line.match(/^[-*•]\s+(.+)$/);
+        if (bullet) return <div key={index} className="grid grid-cols-[1rem_minmax(0,1fr)] gap-2"><span className="pt-[1px] font-bold text-primary">•</span><p>{inlineMarkup(bullet[1])}</p></div>;
+        const ordered = line.match(/^(\d+)[.)]\s+(.+)$/);
+        if (ordered) return <div key={index} className="grid grid-cols-[1.7rem_minmax(0,1fr)] gap-2"><span className="font-mono text-[13px] font-semibold text-primary">{ordered[1]}.</span><p>{inlineMarkup(ordered[2])}</p></div>;
+        return <p key={index}>{inlineMarkup(line)}</p>;
+      })}
+    </div>
+  );
 }
 
 export function AgentPanel({
@@ -207,7 +242,7 @@ export function AgentPanel({
 
   return (
     <aside
-      className="pointer-events-auto relative isolate flex max-h-[580px] w-full flex-col gap-4 overflow-y-auto panel border-l-2 border-l-primary bg-[#fffafd]/95 p-5 shadow-[0_24px_70px_rgba(47,22,37,.32)] backdrop-blur-xl sm:w-[410px]"
+      className="pointer-events-auto relative isolate flex h-[100dvh] max-h-none w-full flex-col gap-3 overflow-hidden border-l-2 border-l-primary bg-[#fffafd]/98 p-4 shadow-[0_24px_70px_rgba(47,22,37,.32)] backdrop-blur-xl sm:h-[min(760px,calc(100vh-2rem))] sm:w-[min(720px,calc(100vw-3rem))] sm:rounded-2xl sm:p-6"
       role="dialog"
       aria-label={`${agent.name} 상세`}
     >
@@ -245,7 +280,7 @@ export function AgentPanel({
         </p>
       )}
 
-      <div className="border-t border-hairline pt-3">
+      <div className="flex min-h-0 flex-1 flex-col border-t border-hairline pt-3">
         <div className="mb-2 flex items-center justify-between gap-2">
           <p className="text-body-sm font-semibold text-ink">에이전트와 대화</p>
           <button type="button" onClick={clearChat} className="text-[12px] text-ink-tertiary hover:text-primary">대화 초기화</button>
@@ -257,12 +292,12 @@ export function AgentPanel({
             </button>
           ))}
         </div>
-        <div className="max-h-48 space-y-2 overflow-y-auto rounded-lg bg-white/55 p-2.5">
+        <div className="min-h-[220px] flex-1 space-y-3 overflow-y-auto overscroll-contain rounded-xl border border-primary/10 bg-white/65 p-3 sm:min-h-[300px] sm:p-4">
           {messages.map((message, index) => (
             <div key={index} className={`flex ${message.role === "user" ? "justify-end" : "justify-start"}`}>
-              <p className={`max-w-[88%] rounded-lg px-2.5 py-2 text-[13px] leading-relaxed ${message.role === "user" ? "bg-primary text-white" : "bg-white text-ink shadow-sm"}`}>
-                {message.content}
-              </p>
+              <div className={`rounded-xl px-3.5 py-3 sm:px-4 ${message.role === "user" ? "max-w-[88%] bg-primary text-[15px] leading-6 text-white" : "w-full bg-white shadow-sm ring-1 ring-black/[0.04]"}`}>
+                {message.role === "assistant" ? <StructuredAnswer content={message.content} /> : <p className="whitespace-pre-wrap break-words text-left">{message.content}</p>}
+              </div>
             </div>
           ))}
           {sending && <p className="text-[12px] text-ink-tertiary">답변을 작성하고 있습니다…</p>}
@@ -288,9 +323,9 @@ export function AgentPanel({
             {chatMeta.mock ? "모의 AI" : chatMeta.provider || "AI"} · {chatMeta.model || "모델 확인 중"}
           </p>
         )}
-        <form onSubmit={sendMessage} className="mt-2 flex gap-2">
-          <input value={draft} onChange={(e) => setDraft(e.target.value)} className="input min-w-0 flex-1 !bg-white/80" placeholder="업무에 대해 질문하세요" maxLength={4000} />
-          <button type="submit" className="btn btn-primary !px-3" disabled={sending || !draft.trim()} aria-label="메시지 보내기">
+        <form onSubmit={sendMessage} className="mt-3 flex items-end gap-2">
+          <textarea value={draft} onChange={(e) => setDraft(e.target.value)} className="input min-h-[48px] min-w-0 flex-1 resize-none !bg-white/90 py-3 text-[16px] leading-6" placeholder="업무에 대해 질문하세요" maxLength={4000} rows={2} />
+          <button type="submit" className="btn btn-primary h-12 !px-4" disabled={sending || !draft.trim()} aria-label="메시지 보내기">
             <Icon name="send" size={15} />
           </button>
         </form>
