@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import json
+import shutil
+import subprocess
+
 from fastapi import APIRouter
 
 from app.config import get_settings
@@ -62,3 +66,27 @@ def providers_status(probe: bool = True):
     from app.providers.status import provider_status
 
     return provider_status(probe=probe)
+
+
+@router.get("/agent-reach/status")
+def agent_reach_status():
+    """Read-only Agent Reach health check. Never imports cookies or changes the host."""
+    if not get_settings().agent_reach_enabled:
+        return {"installed": False, "status": "DISABLED", "channels": {}}
+    executable = shutil.which("agent-reach")
+    if not executable:
+        return {"installed": False, "status": "NOT_INSTALLED", "channels": {}}
+    try:
+        result = subprocess.run(
+            [executable, "doctor", "--json"], capture_output=True, text=True,
+            encoding="utf-8", errors="replace", timeout=20, check=False,
+        )
+        if result.returncode != 0:
+            return {"installed": True, "status": "DEGRADED", "channels": {},
+                    "detail": (result.stderr or result.stdout)[-500:]}
+        channels = json.loads(result.stdout or "{}")
+        ready = sum(1 for row in channels.values() if isinstance(row, dict) and row.get("status") == "ok")
+        return {"installed": True, "status": "READY" if ready else "DEGRADED",
+                "ready_channels": ready, "total_channels": len(channels), "channels": channels}
+    except (subprocess.TimeoutExpired, ValueError, OSError) as exc:
+        return {"installed": True, "status": "DEGRADED", "channels": {}, "detail": str(exc)[:500]}

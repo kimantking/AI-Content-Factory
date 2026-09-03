@@ -221,6 +221,7 @@ class Settings(BaseSettings):
     # Cross-Phase Intelligence Upgrade — URL learning / dataset / prompt distillation
     url_learning_enabled: bool = True
     browser_fetch_enabled: bool = False       # Playwright adapter is opt-in (D67 review)
+    agent_reach_enabled: bool = True          # read-only web/YouTube/GitHub/RSS tools
     auto_promote_learned_prompts: bool = False  # learned prompts never auto-reach production
     learning_single_source_max_status: str = "EXPERIMENTAL"  # 1 reference can't exceed this
     max_learning_items_per_job: int = 100
