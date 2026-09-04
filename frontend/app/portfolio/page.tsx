@@ -13,6 +13,7 @@ import {
   listBrands,
   listChannels,
   listWorkspaces,
+  updateChannel,
 } from "@/lib/api";
 
 function Card({ title, right, children }: { title: string; right?: React.ReactNode; children: React.ReactNode }) {
@@ -28,6 +29,8 @@ function Card({ title, right, children }: { title: string; right?: React.ReactNo
 }
 
 const num = (v: unknown) => (typeof v === "number" ? Math.round(v * 10) / 10 : "—");
+const joinTopics = (value?: string[]) => (value ?? []).join(", ");
+const splitTopics = (value: string) => value.split(",").map((item) => item.trim()).filter(Boolean);
 
 export default function PortfolioPage() {
   const [apiKey, setApiKey] = useState("");
@@ -40,6 +43,9 @@ export default function PortfolioPage() {
   const [alloc, setAlloc] = useState<Record<string, unknown> | null>(null);
   const [mon, setMon] = useState<Record<string, Record<string, unknown>>>({});
   const [err, setErr] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState("");
+  const [strategy, setStrategy] = useState({ concept: "", topics: "", blocked: "", audience: "", strict: true });
+  const [strategyMsg, setStrategyMsg] = useState("");
 
   useEffect(() => {
     try {
@@ -102,6 +108,43 @@ export default function PortfolioPage() {
       setMon((m) => ({ ...m, [id]: r }));
     } catch (e) {
       setErr(String(e));
+    }
+  };
+
+  const editStrategy = (channel: ChannelRow) => {
+    const current = channel.content_strategy ?? {};
+    setEditingId(channel.id);
+    setStrategy({
+      concept: current.concept ?? "",
+      topics: joinTopics(current.topics),
+      blocked: joinTopics(current.blocked_topics),
+      audience: channel.target_audience ?? "",
+      strict: current.strict_topic_match ?? true,
+    });
+    setStrategyMsg("");
+  };
+
+  const saveStrategy = async () => {
+    if (!editingId) return;
+    if (!strategy.concept.trim() || splitTopics(strategy.topics).length === 0) {
+      setStrategyMsg("콘셉트와 업로드 주제를 하나 이상 입력해 주세요.");
+      return;
+    }
+    setStrategyMsg("저장 중…");
+    try {
+      await updateChannel(editingId, {
+        target_audience: strategy.audience.trim(),
+        content_strategy: {
+          concept: strategy.concept.trim(),
+          topics: splitTopics(strategy.topics),
+          blocked_topics: splitTopics(strategy.blocked),
+          strict_topic_match: strategy.strict,
+        },
+      });
+      setStrategyMsg("저장했습니다. 이제 이 주제에 맞는 콘텐츠만 이 채널로 전달됩니다.");
+      await load();
+    } catch (e) {
+      setStrategyMsg(`저장 실패: ${String(e)}`);
     }
   };
 
@@ -219,9 +262,14 @@ export default function PortfolioPage() {
                     <td className="py-1 pr-2">{String(s["scale_status"] ?? "—")}</td>
                     <td className="py-1 pr-2 tabular-nums">{a != null ? a.toFixed(0) : "—"}</td>
                     <td className="py-1">
-                      <button className="rounded border px-2 py-0.5" onClick={() => loadMon(c.id)}>
-                        $ model
-                      </button>
+                      <div className="flex gap-1 whitespace-nowrap">
+                        <button className="rounded border px-2 py-0.5" onClick={() => editStrategy(c)}>
+                          콘셉트 설정
+                        </button>
+                        <button className="rounded border px-2 py-0.5" onClick={() => loadMon(c.id)}>
+                          수익 모델
+                        </button>
+                      </div>
                     </td>
                   </tr>
                 );
@@ -229,6 +277,54 @@ export default function PortfolioPage() {
             </tbody>
           </table>
         </div>
+        {editingId && (
+          <div className="mt-4 rounded-lg border border-primary/30 bg-surface-2 p-4">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h3 className="text-sm font-bold">{channels.find((c) => c.id === editingId)?.name} 설정</h3>
+                <p className="text-xs text-ink-subtle">전체 학습 자료는 함께 사용하고, 게시할 때 이 규칙으로 채널을 선택합니다.</p>
+              </div>
+              <button className="rounded border px-2 py-1 text-xs" onClick={() => setEditingId("")}>닫기</button>
+            </div>
+            <div className="grid gap-3 md:grid-cols-2">
+              <label className="text-xs font-semibold md:col-span-2">
+                채널 콘셉트
+                <textarea className="mt-1 min-h-20 w-full rounded border border-hairline bg-surface-1 px-3 py-2 font-normal"
+                  value={strategy.concept} onChange={(e) => setStrategy((v) => ({ ...v, concept: e.target.value }))}
+                  placeholder="이 채널의 관점, 분위기, 시청자에게 주는 가치" />
+              </label>
+              <label className="text-xs font-semibold">
+                업로드 허용 주제 (쉼표로 구분)
+                <input className="mt-1 w-full rounded border border-hairline bg-surface-1 px-3 py-2 font-normal"
+                  value={strategy.topics} onChange={(e) => setStrategy((v) => ({ ...v, topics: e.target.value }))}
+                  placeholder="AI 도구, 업무 자동화" />
+              </label>
+              <label className="text-xs font-semibold">
+                업로드 금지 주제 (쉼표로 구분)
+                <input className="mt-1 w-full rounded border border-hairline bg-surface-1 px-3 py-2 font-normal"
+                  value={strategy.blocked} onChange={(e) => setStrategy((v) => ({ ...v, blocked: e.target.value }))}
+                  placeholder="도박, 정치" />
+              </label>
+              <label className="text-xs font-semibold md:col-span-2">
+                주요 시청자
+                <input className="mt-1 w-full rounded border border-hairline bg-surface-1 px-3 py-2 font-normal"
+                  value={strategy.audience} onChange={(e) => setStrategy((v) => ({ ...v, audience: e.target.value }))}
+                  placeholder="예: AI를 처음 쓰는 직장인" />
+              </label>
+            </div>
+            <label className="mt-3 flex items-center gap-2 text-xs">
+              <input type="checkbox" checked={strategy.strict}
+                onChange={(e) => setStrategy((v) => ({ ...v, strict: e.target.checked }))} />
+              주제가 맞지 않으면 이 채널에 게시하지 않기
+            </label>
+            <div className="mt-3 flex flex-wrap items-center gap-3">
+              <button className="rounded bg-primary px-4 py-2 text-xs font-bold text-on-primary" onClick={saveStrategy}>
+                채널 규칙 저장
+              </button>
+              {strategyMsg && <span className="text-xs text-ink-subtle">{strategyMsg}</span>}
+            </div>
+          </div>
+        )}
         {alloc && (
           <p className="mt-2 text-xs text-ink-subtle">
             total ${num(alloc["total_usd"])} · trend reserve ${num(alloc["trend_reserve_usd"])} ·

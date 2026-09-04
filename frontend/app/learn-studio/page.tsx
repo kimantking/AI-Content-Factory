@@ -15,13 +15,6 @@ const PURPOSE: { id: string; ko: string }[] = [
   { id: "COMPETITOR_REFERENCE", ko: "경쟁 콘텐츠" },
   { id: "TECHNICAL_REFERENCE", ko: "기술 자료" },
 ];
-const SCOPE: { id: string; ko: string }[] = [
-  { id: "THIS_RUN", ko: "이번 실행" },
-  { id: "THIS_CAMPAIGN", ko: "이 캠페인" },
-  { id: "CHANNEL", ko: "현재 채널" },
-  { id: "BRAND", ko: "브랜드" },
-  { id: "WORKSPACE", ko: "작업공간 전체" },
-];
 const DATASET_KO: Record<string, string> = {
   VIDEO_DATASET: "영상 데이터셋",
   HOOK_DATASET: "훅 데이터셋",
@@ -35,7 +28,7 @@ const FLOW = ["자료 수집", "자료 분석", "패턴 발견", "스킬 생성"
 export default function LearnStudioPage() {
   const [wsId, setWsId] = useState("");
   const [urls, setUrls] = useState("");
-  const [scope, setScope] = useState("CHANNEL");
+  const scope = "WORKSPACE";
   const [purpose, setPurpose] = useState("AUTO");
   const [dash, setDash] = useState<LearningDashboard | null>(null);
   const [gaps, setGaps] = useState<LearningGaps | null>(null);
@@ -79,7 +72,7 @@ export default function LearnStudioPage() {
       <PageHeader
         title="AI 학습실"
         eyebrow="학습"
-        description="좋은 자료를 보여주면 AI가 패턴을 분석해 다음 제작에 활용합니다."
+        description="모든 에이전트가 자료를 함께 학습하고, 게시할 때는 채널 주제에 맞는 콘텐츠만 사용합니다."
         actions={
           <button className="btn btn-secondary" onClick={refresh}>
             <Icon name="refresh" size={15} />
@@ -119,23 +112,9 @@ export default function LearnStudioPage() {
                 ))}
               </div>
             </div>
-            <div>
-              <p className="text-caption text-ink-subtle">저장 범위</p>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {SCOPE.map((s) => (
-                  <button
-                    key={s.id}
-                    onClick={() => setScope(s.id)}
-                    aria-pressed={scope === s.id}
-                    className={`rounded-md border px-2.5 py-1 text-caption ${
-                      scope === s.id ? "border-primary bg-primary/10 text-ink" : "border-hairline text-ink-subtle"
-                    }`}
-                  >
-                    {s.ko}
-                  </button>
-                ))}
-              </div>
-            </div>
+            <p className="text-caption text-ink-subtle">
+              저장 범위: 작업공간 전체 · 이 자료는 모든 에이전트와 채널이 함께 학습합니다.
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-3 border-t border-hairline bg-white/[0.02] p-4 sm:px-5">

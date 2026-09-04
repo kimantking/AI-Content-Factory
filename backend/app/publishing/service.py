@@ -47,8 +47,28 @@ def create_jobs_for_campaign(
         return []
 
     contents = session.query(PlatformContent).filter_by(campaign_id=campaign_id).all()
+    active_channels = []
+    channel_routes = {}
+    if camp.workspace_id:
+        from app.db.models_mb import Channel
+        from app.mb.routing import route
+
+        active_channels = (session.query(Channel)
+                           .filter_by(workspace_id=camp.workspace_id, status="ACTIVE").all())
+        if active_channels:
+            decision = route(session, workspace_id=camp.workspace_id, topic=camp.topic)
+            channel_routes = {
+                platform: session.get(Channel, channel_id)
+                for platform, channel_id in decision.decision.get("routed_channels", {}).items()
+            }
+            if decision.routed_channel_id:
+                camp.channel_id = decision.routed_channel_id
+                camp.brand_id = decision.routed_brand_id
     jobs: list[PublishJob] = []
     for content in contents:
+        routed_channel = channel_routes.get(content.platform)
+        if camp.workspace_id and active_channels and routed_channel is None:
+            continue  # configured workspace, but this topic matches no channel on this platform
         cap = get_capability(content.platform)
         # only GENERATE_AND_PUBLISH platforms get a job (spec §AR / §AS)
         _ok, _sel_mode = publish_allowed(session, campaign_id=campaign_id,
@@ -57,7 +77,8 @@ def create_jobs_for_campaign(
             continue
         media_ids, thumb_id = _media_for(session, campaign_id, content)
         asset_hashes = [a.hash for a in session.query(Asset).filter(Asset.id.in_(media_ids))]
-        acct_id = accounts.get(content.platform)
+        acct_id = ((routed_channel.platform_account_id if routed_channel else None)
+                   or accounts.get(content.platform))
         when = schedule.get(content.platform)
         idem = make_idempotency_key(
             platform=content.platform, account_id=acct_id or "none",
@@ -75,7 +96,12 @@ def create_jobs_for_campaign(
             title=content.title or camp.topic, description=content.script,
             caption=content.caption or content.hook, hashtags=content.hashtags or [],
             media_asset_ids=media_ids, thumbnail_asset_id=thumb_id,
-            privacy="PRIVATE", platform_settings={"cta": content.cta},
+            privacy="PRIVATE", platform_settings={
+                "cta": content.cta,
+                "routed_channel_id": routed_channel.id if routed_channel else None,
+                "channel_concept": ((routed_channel.content_strategy or {}).get("concept", "")
+                                    if routed_channel else ""),
+            },
             ai_generated=True, run_mode=run_mode, max_attempts=s.publish_max_attempts,
             idempotency_key=idem, dry_run=dry_run,
             approval_status="APPROVED" if run_mode == "MANUAL" else "PENDING",

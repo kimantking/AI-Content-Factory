@@ -13,6 +13,8 @@ type State = {
   step: number;
   workspace: string;
   brand: string;
+  concept: string;
+  topics: string;
   sns: string[];
   cloudKey: boolean;
   localChecked: boolean;
@@ -21,7 +23,7 @@ type State = {
   dryRunOk: boolean;
 };
 const INIT: State = {
-  step: 0, workspace: "", brand: "", sns: ["youtube_shorts"], cloudKey: false,
+  step: 0, workspace: "", brand: "", concept: "", topics: "", sns: ["youtube_shorts"], cloudKey: false,
   localChecked: false, style: "균형", budget: 2, dryRunOk: false,
 };
 
@@ -59,8 +61,15 @@ export default function SetupWizard() {
     setSaving(true);
     setSaveMsg(null);
     try {
-      const res = await finishSetup({ workspace: s.workspace, brand: s.brand });
+      const res = await finishSetup({
+        workspace: s.workspace,
+        brand: s.brand,
+        sns: s.sns,
+        concept: s.concept,
+        topics: s.topics.split(",").map((item) => item.trim()).filter(Boolean),
+      });
       try {
+        if (res.workspace_id) window.localStorage?.setItem("acf_workspace_id", res.workspace_id);
         window.localStorage?.setItem(KEY, JSON.stringify({
           ...s, workspaceId: res.workspace_id, brandId: res.brand_id,
         }));
@@ -73,6 +82,10 @@ export default function SetupWizard() {
       setSaving(false);
     }
   };
+
+  const canContinue = s.step !== 0 || Boolean(s.workspace.trim());
+  const canLeaveBrand = s.step !== 1 || Boolean(s.brand.trim() && s.concept.trim() && s.topics.trim());
+  const canLeaveSns = s.step !== 2 || s.sns.length > 0;
 
   return (
     <div className="space-y-5">
@@ -101,11 +114,20 @@ export default function SetupWizard() {
           </div>
         )}
         {s.step === 1 && (
-          <div>
+          <div className="space-y-3">
             <label className="text-sm font-bold">첫 브랜드</label>
             <input className="mt-2 w-full rounded border border-hairline px-3 py-2"
               value={s.brand} onChange={(e) => set({ brand: e.target.value })}
               placeholder="예: 테크 채널" />
+            <label className="block text-sm font-bold">채널 콘셉트</label>
+            <textarea className="h-20 w-full rounded border border-hairline px-3 py-2"
+              value={s.concept} onChange={(e) => set({ concept: e.target.value })}
+              placeholder="예: 초보자에게 AI 도구와 자동화 방법을 쉽게 알려주는 채널" />
+            <label className="block text-sm font-bold">업로드할 주제</label>
+            <input className="w-full rounded border border-hairline px-3 py-2"
+              value={s.topics} onChange={(e) => set({ topics: e.target.value })}
+              placeholder="예: AI 도구, 업무 자동화, 콘텐츠 제작 (쉼표로 구분)" />
+            <p className="text-xs text-ink-subtle">선택한 모든 SNS에 우선 동일하게 적용하며 나중에 채널별로 수정할 수 있습니다.</p>
           </div>
         )}
         {s.step === 2 && (
@@ -188,7 +210,8 @@ export default function SetupWizard() {
         <button className="rounded border px-4 py-2 text-sm disabled:opacity-40"
           disabled={s.step === 0} onClick={prev}>이전</button>
         {s.step < STEPS.length - 1 ? (
-          <button className="rounded bg-primary px-4 py-2 text-sm text-on-primary" onClick={next}>다음</button>
+          <button className="rounded bg-primary px-4 py-2 text-sm text-on-primary disabled:opacity-40"
+            disabled={!canContinue || !canLeaveBrand || !canLeaveSns} onClick={next}>다음</button>
         ) : (
           <button className="rounded bg-success px-4 py-2 text-sm font-bold text-on-primary disabled:opacity-50"
             disabled={saving} onClick={finish}>
