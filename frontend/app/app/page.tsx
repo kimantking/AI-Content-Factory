@@ -118,7 +118,9 @@ export default function Home() {
       getAutopilotStatus().then((d) => alive && setAuto(d)).catch(() => undefined);
     };
     load();
-    const t = setInterval(load, 30000);
+    // Production jobs can move quickly; a 30-second interval made a healthy
+    // worker look frozen. Five seconds keeps status useful without hammering it.
+    const t = setInterval(load, 5000);
     return () => {
       alive = false;
       clearInterval(t);

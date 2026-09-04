@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Suspense, useCallback, useEffect, useState } from "react";
-import { contentLibrary, libraryStats, type LibraryCard, type LibraryPage } from "@/lib/api";
+import { contentLibrary, deleteContent, libraryStats, type LibraryCard, type LibraryPage } from "@/lib/api";
 import { PageHeader, Card, CardBody, EmptyState, ErrorState } from "@/components/ui/primitives";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { DataTable, Pagination, useUrlState, type Column } from "@/components/ui/DataTable";
@@ -49,6 +49,7 @@ function LibraryInner() {
   const [stats, setStats] = useState<Record<string, number> | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const view = get("view", "gallery");
   const q = get("q");
@@ -88,6 +89,21 @@ function LibraryInner() {
 
   const setFilter = (patch: Record<string, string | number | null>) => setMany({ ...patch, page: 1 });
 
+  const remove = async (c: LibraryCard) => {
+    if (!window.confirm(`“${c.topic || "제목 없음"}” 콘텐츠를 완전히 삭제할까요?\n이 작업은 되돌릴 수 없습니다.`)) return;
+    setDeletingId(c.campaign_id);
+    setErr(null);
+    try {
+      await deleteContent(c.campaign_id);
+      load();
+      libraryStats(wsId || undefined).then(setStats).catch(() => undefined);
+    } catch (e) {
+      setErr(String(e));
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   const columns: Column<LibraryCard>[] = [
     {
       key: "topic",
@@ -106,6 +122,15 @@ function LibraryInner() {
     { key: "pub", header: "게시", hideBelow: "sm", cell: (c) => <StatusBadge value={c.publish_state} size="sm" /> },
     { key: "views", header: "조회", align: "right", hideBelow: "md", cell: (c) => c.views?.toLocaleString() ?? "-" },
     { key: "revenue", header: "수익", align: "right", hideBelow: "lg", cell: (c) => money(c) },
+    { key: "actions", header: "관리", align: "right", cell: (c) => (
+      <button
+        className="btn btn-secondary !px-2 !py-1 !text-caption"
+        disabled={deletingId === c.campaign_id || c.status === "RUNNING"}
+        onClick={(e) => { e.stopPropagation(); void remove(c); }}
+      >
+        {deletingId === c.campaign_id ? "삭제 중…" : "삭제"}
+      </button>
+    ) },
   ];
 
   return (
@@ -212,7 +237,8 @@ function LibraryInner() {
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {data?.items.map((c) => (
-            <Link key={c.campaign_id} href={`/library/${c.campaign_id}`} className="group">
+            <div key={c.campaign_id} className="group relative">
+              <Link href={`/library/${c.campaign_id}`}>
               <Card className="overflow-hidden transition-colors group-hover:border-hairline-strong">
                 <div className="relative flex aspect-video items-center justify-center border-b border-hairline bg-surface-2 text-ink-tertiary">
                   {c.thumbnail_path ? (
@@ -249,7 +275,16 @@ function LibraryInner() {
                   </p>
                 </CardBody>
               </Card>
-            </Link>
+              </Link>
+              <button
+                className="btn btn-secondary absolute right-2 top-2 z-10 !px-2.5 !py-1.5 !text-caption shadow-sm"
+                disabled={deletingId === c.campaign_id || c.status === "RUNNING"}
+                title={c.status === "RUNNING" ? "진행 중인 작업은 삭제할 수 없습니다" : "콘텐츠 삭제"}
+                onClick={() => void remove(c)}
+              >
+                {deletingId === c.campaign_id ? "삭제 중…" : "삭제"}
+              </button>
+            </div>
           ))}
         </div>
       )}

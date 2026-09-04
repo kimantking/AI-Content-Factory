@@ -65,5 +65,24 @@ def test_add_platform_endpoint(sample):
     assert dup.status_code == 409
 
 
+def test_delete_content_removes_campaign_and_children(sample):
+    cid, _ = sample
+    r = client.delete(f"/api/library/{cid}")
+    assert r.status_code == 200
+    assert r.json()["ok"] is True
+    assert client.get(f"/api/library/{cid}").status_code == 404
+    with session_scope() as db:
+        assert db.get(Campaign, cid) is None
+        assert db.query(Asset).filter_by(campaign_id=cid).count() == 0
+
+
+def test_delete_running_content_is_blocked():
+    cid = str(uuid.uuid4())
+    with session_scope() as db:
+        db.add(Campaign(id=cid, topic="진행 중", audience_goal="VIEWS",
+                        platforms=["youtube_shorts"], status="RUNNING"))
+    assert client.delete(f"/api/library/{cid}").status_code == 409
+
+
 def test_missing_content_404():
     assert client.get(f"/api/library/{uuid.uuid4()}").status_code == 404

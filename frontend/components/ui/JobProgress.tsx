@@ -20,12 +20,30 @@ export const PIPELINE_STAGES: { key: string; label: string }[] = [
  * caller maps backend status strings into JobStep.state.
  */
 export function JobProgress({ steps, dense = false }: { steps: JobStep[]; dense?: boolean }) {
+  const done = steps.filter((s) => statusMeta(s.state).tone === "ok").length;
+  const active = steps.some((s) => statusMeta(s.state).tone === "run");
+  const failed = steps.some((s) => statusMeta(s.state).tone === "error");
+  const percent = steps.length
+    ? Math.round(((done + (active ? 0.5 : 0)) / steps.length) * 100)
+    : 0;
   return (
-    <ol
-      className={`flex flex-col gap-0 sm:flex-row sm:items-start sm:gap-0 ${
-        dense ? "" : ""
-      }`}
-    >
+    <div className="space-y-3">
+      <div aria-label={`전체 작업 진행률 ${percent}%`}>
+        <div className="mb-1.5 flex items-center justify-between text-caption">
+          <span className={active ? "font-medium text-primary" : failed ? "text-error" : "text-ink-subtle"}>
+            {active ? "실제 작업 처리 중" : failed ? "작업 중단됨" : percent === 100 ? "작업 완료" : "작업 대기"}
+          </span>
+          <strong className="font-mono text-ink">{percent}%</strong>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-surface-3">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${failed ? "bg-error" : "bg-primary"} ${active ? "animate-pulse" : ""}`}
+            style={{ width: `${percent}%` }}
+          />
+        </div>
+        <p className="mt-1 text-[10px] text-ink-tertiary">전체 단계 기준 · 화면이 열려 있는 동안 자동 갱신</p>
+      </div>
+      <ol className={`flex flex-col gap-0 sm:flex-row sm:items-start sm:gap-0 ${dense ? "" : ""}`}>
       {steps.map((s, i) => {
         const m = statusMeta(s.state);
         const last = i === steps.length - 1;
@@ -63,7 +81,8 @@ export function JobProgress({ steps, dense = false }: { steps: JobStep[]; dense?
           </li>
         );
       })}
-    </ol>
+      </ol>
+    </div>
   );
 }
 

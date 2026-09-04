@@ -99,3 +99,22 @@ def test_ollama_plain_text_chat_is_wrapped_as_valid_json(monkeypatch):
                                  context={"plain_text": True, "max_tokens": 1400})
     assert json.loads(response.text) == {"reply": "긴 대본도 그대로 반환합니다."}
     assert "format" not in captured
+
+
+def test_ollama_retries_truncated_structured_output(monkeypatch):
+    provider = OllamaLLMProvider(model="gemma3:4b")
+    calls = []
+
+    def fake_request(_path, payload):
+        calls.append(payload)
+        if len(calls) == 1:
+            return {"message": {"content": '{"candidate_facts":[{"fact":"잘림'}}
+        return {"message": {"content": '{"candidate_facts":[],"audience":"한국"}'}}
+
+    monkeypatch.setattr(provider, "_request", fake_request)
+    response = provider.complete(system="리서치", user="조사", task="research", context={})
+    assert json.loads(response.text)["audience"] == "한국"
+    assert len(calls) == 2
+    assert calls[0]["format"] == "json"
+    assert calls[0]["options"]["num_predict"] >= 4096
+    assert calls[1]["options"]["num_predict"] >= 6144

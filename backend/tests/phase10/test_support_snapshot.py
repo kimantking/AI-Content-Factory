@@ -111,6 +111,14 @@ def test_last_error_normalises_code_and_suggests_action(etype, scope, msg, code)
     assert le["trace_id"]
 
 
+def test_invalid_ollama_json_is_not_misreported_as_offline():
+    from app.support.errors import is_retryable, normalise
+
+    code = normalise("INVALID_OUTPUT", "non-JSON ollama output: unterminated string", "agent:Research Agent")
+    assert code == "MODEL_OUTPUT_SCHEMA_INVALID"
+    assert is_retryable(code)
+
+
 def test_admin_gets_infra_detail_user_does_not():
     with session_scope() as db:
         user = build_snapshot(db, workspace_id=str(uuid.uuid4()), admin=False)
