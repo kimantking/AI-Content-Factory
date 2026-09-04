@@ -1,0 +1,51 @@
+from app.db.base import session_scope
+from app.db.models import Campaign
+from app.tasks import _enqueue_media_after_text
+
+
+def _campaign(mode: str, *, step: str = "done", status: str = "SUCCESS") -> str:
+    with session_scope() as session:
+        camp = Campaign(
+            topic="자동 영상 테스트",
+            audience_goal="BALANCED",
+            platforms=["youtube_shorts"],
+            status=status,
+            current_step=step,
+            execution_mode=mode,
+        )
+        session.add(camp)
+        session.flush()
+        return camp.id
+
+
+def test_completed_production_automatically_enters_media_queue(monkeypatch):
+    campaign_id = _campaign("CREATE_ONLY")
+    calls = []
+    monkeypatch.setattr("app.tasks.run_media_task.apply", lambda **kwargs: calls.append(kwargs))
+
+    assert _enqueue_media_after_text(campaign_id, None) is True
+    assert calls == [{"args": [campaign_id, ["youtube_shorts"]]}]
+    with session_scope() as session:
+        camp = session.get(Campaign, campaign_id)
+        assert camp.status == "RUNNING"
+        assert camp.current_step == "media:queued"
+
+
+def test_media_handoff_is_idempotent(monkeypatch):
+    campaign_id = _campaign("CREATE_AND_LEARN")
+    calls = []
+    monkeypatch.setattr("app.tasks.run_media_task.apply", lambda **kwargs: calls.append(kwargs))
+
+    assert _enqueue_media_after_text(campaign_id, None) is True
+    assert _enqueue_media_after_text(campaign_id, None) is False
+    assert len(calls) == 1
+
+
+def test_learning_mode_never_starts_media(monkeypatch):
+    campaign_id = _campaign("LEARN_ONLY")
+    monkeypatch.setattr(
+        "app.tasks.run_media_task.apply",
+        lambda **kwargs: (_ for _ in ()).throw(AssertionError("media must not start")),
+    )
+
+    assert _enqueue_media_after_text(campaign_id, None) is False
