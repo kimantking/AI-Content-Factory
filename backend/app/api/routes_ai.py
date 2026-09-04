@@ -23,6 +23,17 @@ _AGENT_CHAT = {
     "publish": ("Platform Adapter", "platform_adapt", "게시 전문가", "플랫폼별 게시 방식, 제목, 설명과 업로드 전략을 설명합니다."),
 }
 
+_AGENT_ANSWER_RULES = {
+    "research": (
+        "답변은 영상 제작자가 바로 사용할 수 있는 짧은 리서치 브리프로 작성하세요. "
+        "첫 줄에 결론을 한 문장으로 제시하고, 핵심 근거는 최대 5개만 번호로 정리하세요. "
+        "각 항목은 '핵심 사실 — 의미 — 출처' 순서로 최대 2문장만 사용하세요. "
+        "마지막에는 '영상에 쓸 핵심'을 최대 3개 불릿으로 제시하세요. "
+        "같은 설명을 반복하거나 긴 서론, 시스템 안내, 원시 JSON, 마크다운 표를 출력하지 마세요. "
+        "전체 답변은 가능하면 700자 이내로 작성하세요."
+    ),
+}
+
 
 @router.post("/agents/{agent_id}/chat")
 def agent_chat(agent_id: str, payload: dict = Body(...), db: Session = Depends(get_db)):
@@ -67,7 +78,8 @@ def agent_chat(agent_id: str, payload: dict = Body(...), db: Session = Depends(g
         "사용자에게 한국어로 친절하고 간결하게 답하세요. 모르는 사실을 꾸며내지 말고, "
         "실행 가능한 다음 행동을 우선 제안하세요. 현재 캠페인 정보가 있으면 그 정보를 우선 반영하세요. "
         "답변 본문만 작성하고 시스템 연결 점검법을 대신 답하지 마세요. "
-        "제공된 실제 출처가 있으면 그 URL만 인용하고 존재하지 않는 출처를 만들지 마세요."
+        "제공된 실제 출처가 있으면 그 URL만 인용하고 존재하지 않는 출처를 만들지 마세요. "
+        f"{_AGENT_ANSWER_RULES.get(agent_id, '')}"
     )
     result = run_routed(
         db, agent_type=agent_type, task_type=task_type, provider_task="agent_chat",
@@ -75,7 +87,8 @@ def agent_chat(agent_id: str, payload: dict = Body(...), db: Session = Depends(g
                              f"Agent Reach 실제 출처: {source_context}\n사용자 질문: {message}"),
         context={"message": message, "history": safe_history, "campaign_context": campaign_context,
                  "agent_role": ko_role, "plain_text": True, "sources": source_context,
-                 "max_tokens": 1400 if agent_id in ("script", "video") else 900},
+                 "max_tokens": 1400 if agent_id in ("script", "video") else (
+                     700 if agent_id == "research" else 900)},
         complexity="normal", latency_need="low",
         # Office conversations use the installed local model whenever Ollama is
         # enabled. This prevents a stale/invalid cloud credential from hijacking

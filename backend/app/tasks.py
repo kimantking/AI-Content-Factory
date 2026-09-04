@@ -8,6 +8,38 @@ from app.db.models import Campaign, ErrorLog
 from app.providers.errors import NON_RETRYABLE
 
 
+_AUTO_MEDIA_MODES = {"CREATE_ONLY", "CREATE_AND_LEARN"}
+
+
+def _enqueue_media_after_text(campaign_id: str, platforms: list[str] | None) -> bool:
+    """Move a completed production campaign into the media queue exactly once."""
+    with session_scope() as session:
+        camp = session.get(Campaign, campaign_id)
+        if (
+            camp is None
+            or camp.execution_mode not in _AUTO_MEDIA_MODES
+            or camp.status != "SUCCESS"
+            or camp.current_step != "done"
+        ):
+            return False
+        selected_platforms = platforms or camp.platforms or ["youtube_shorts"]
+        # Claim the hand-off before touching Celery so a refresh/retry cannot
+        # enqueue the same render twice.
+        camp.status = "RUNNING"
+        camp.current_step = "media:queued"
+
+    from app.config import get_settings
+
+    if get_settings().run_inline:
+        run_media_task.apply(args=[campaign_id, selected_platforms])
+    else:
+        try:
+            run_media_task.apply_async(args=[campaign_id, selected_platforms], queue="render")
+        except Exception:  # broker unavailable -> preserve the existing local fallback
+            run_media_task.apply(args=[campaign_id, selected_platforms])
+    return True
+
+
 def _mark_failed(campaign_id: str, exc: Exception) -> None:
     with session_scope() as session:
         camp = session.get(Campaign, campaign_id)
@@ -25,7 +57,12 @@ def run_campaign_task(self, campaign_id: str, topic: str,
                       resume: bool = False):
     try:
         state = run_pipeline(campaign_id, topic, audience_goal, platforms, resume=resume)
-        return {"campaign_id": campaign_id, "status": state.get("status")}
+        media_started = _enqueue_media_after_text(campaign_id, platforms)
+        return {
+            "campaign_id": campaign_id,
+            "status": "RUNNING" if media_started else state.get("status"),
+            "media_started": media_started,
+        }
     except Exception as exc:  # noqa: BLE001
         etype = getattr(exc, "error_type", type(exc).__name__)
         if etype in NON_RETRYABLE or self.request.retries >= self.max_retries:

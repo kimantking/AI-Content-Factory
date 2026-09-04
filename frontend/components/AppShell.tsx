@@ -17,6 +17,7 @@ const NAV: NavGroup[] = [
   {
     items: [
       { href: "/app", label: "홈", icon: "home" },
+      { href: "/jobs", label: "진행 중인 작업", icon: "activity" },
       { href: "/create", label: "만들기", icon: "plus" },
       { href: "/library", label: "콘텐츠", icon: "library" },
       { href: "/governance", label: "검수", icon: "shield" },
@@ -49,9 +50,9 @@ const NAV: NavGroup[] = [
 
 const MOBILE_PRIMARY: (NavItem & { cta?: boolean })[] = [
   { href: "/app", label: "홈", icon: "home" },
-  { href: "/library", label: "콘텐츠", icon: "library" },
+  { href: "/jobs", label: "진행", icon: "activity" },
   { href: "/create", label: "만들기", icon: "plus", cta: true },
-  { href: "/governance", label: "검수", icon: "shield" },
+  { href: "/library", label: "콘텐츠", icon: "library" },
 ];
 const MOBILE_ALL = NAV.flatMap((g) => g.items);
 
@@ -68,6 +69,7 @@ export default function AppShell({ children }: { children: ReactNode }) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [health, setHealth] = useState<string>("UNKNOWN");
   const [alertCount, setAlertCount] = useState(0);
+  const [activeJobCount, setActiveJobCount] = useState(0);
 
   useEffect(() => {
     try {
@@ -115,19 +117,23 @@ export default function AppShell({ children }: { children: ReactNode }) {
     const tick = () => {
       if (document.visibilityState === "hidden" || window.location.pathname === "/") return;
       withTimeout(supportSnapshot())
-        .then((s) => alive && setHealth(s.overall_health))
+        .then((s) => {
+          if (!alive) return;
+          setHealth(s.overall_health);
+          setActiveJobCount(s.current_jobs?.length ?? 0);
+        })
         .catch(() => undefined);
       withTimeout(getOpsAlerts())
         .then((a) => alive && setAlertCount(Array.isArray(a) ? a.length : 0))
         .catch(() => undefined);
     };
     tick();
-    const t = setInterval(tick, 120000);
+    const t = setInterval(tick, activeJobCount > 0 ? 5000 : 15000);
     return () => {
       alive = false;
       clearInterval(t);
     };
-  }, []);
+  }, [activeJobCount]);
 
   const toggleCollapse = useCallback(() => {
     setCollapsed((c) => {
@@ -207,6 +213,11 @@ export default function AppShell({ children }: { children: ReactNode }) {
                       >
                         <Icon name={it.icon} size={17} className={active ? "text-primary" : ""} />
                         {!collapsed && <span className="truncate">{it.label}</span>}
+                        {it.href === "/jobs" && activeJobCount > 0 && (
+                          <span className={`${collapsed ? "absolute right-1 top-1" : "ml-auto"} flex h-5 min-w-5 items-center justify-center rounded-full bg-primary px-1 font-mono text-[10px] text-on-primary`}>
+                            {activeJobCount > 9 ? "9+" : activeJobCount}
+                          </span>
+                        )}
                       </Link>
                     </li>
                   );

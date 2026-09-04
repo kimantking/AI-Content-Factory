@@ -58,6 +58,9 @@ def test_agent_chat_uses_local_only_routing_when_ollama_enabled(_base_settings, 
     assert r.status_code == 200
     assert r.json()["provider"] == "ollama"
     assert captured["privacy"] == "local_only"
+    assert "핵심 근거는 최대 5개" in captured["system"]
+    assert "영상에 쓸 핵심" in captured["system"]
+    assert captured["context"]["max_tokens"] == 700
 
 
 def test_local_ai_status_reports_not_running_when_unreachable(_base_settings):

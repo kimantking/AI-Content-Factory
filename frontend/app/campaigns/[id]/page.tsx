@@ -11,6 +11,7 @@ import { Icon } from "@/components/ui/Icon";
 const STEP_KO: Record<string, string> = {
   create_campaign: "캠페인 생성", research: "리서치", fact_check: "팩트체크", research_fix: "리서치 보완",
   strategize: "전략", hook: "훅", write_script: "대본", qa_script: "대본 QA", persist: "저장",
+  "media:queued": "영상 제작 준비",
 };
 
 function elapsed(iso: string) {
@@ -74,7 +75,12 @@ export default function CampaignPage({ params }: { params: Promise<{ id: string 
     .filter((s) => s.name !== "create_campaign")
     .map((s) => ({ key: s.name, label: STEP_KO[s.name] ?? s.name, state: s.status }));
 
-  const mediaState = data.status === "SUCCESS" ? (media ? media.media_status || "WAITING" : "WAITING") : "WAITING";
+  const mediaActive = data.current_step?.startsWith("media:") ?? false;
+  const mediaState = mediaActive
+    ? (media?.media_status || "RUNNING")
+    : data.status === "SUCCESS"
+      ? (media?.media_status || "WAITING")
+      : "WAITING";
   const stages: JobStep[] = [
     ...scriptSteps,
     { key: "media", label: "미디어", state: mediaState },
