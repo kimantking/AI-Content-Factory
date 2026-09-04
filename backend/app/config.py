@@ -91,7 +91,7 @@ class Settings(BaseSettings):
     google_api_key: str | None = None          # canonical: GOOGLE_API_KEY
     google_ai_enabled: bool = False
     google_api_base: str = "https://generativelanguage.googleapis.com"
-    google_image_model: str = "imagen-3.0-generate-002"   # verify current model before enabling
+    google_image_model: str = "gemini-3.1-flash-image"   # Nano Banana 2
     google_video_model: str = "veo-3.0-generate-001"      # Veo — verify current model before enabling
     google_timeout_seconds: int = 60
     google_video_max_wait_seconds: int = 600              # bounded synchronous poll for a Veo operation

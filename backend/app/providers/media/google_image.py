@@ -14,8 +14,27 @@ from app.providers.media._http import http_json, provider_error
 from app.providers.media.base import MediaResult
 from app.schemas.media import ProviderMode
 
-# Imagen supports a fixed set of aspect ratios.
+# Imagen 3/4 were retired. Keep old .env values working by translating them
+# to Google's current native image model and endpoint.
+_CURRENT_IMAGE_MODEL = "gemini-3.1-flash-image"
+
+# Native Gemini image generation supports these aspect ratios.
 _RATIOS = {(1, 1): "1:1", (9, 16): "9:16", (16, 9): "16:9", (3, 4): "3:4", (4, 3): "4:3"}
+
+
+def _effective_model(configured: str) -> str:
+    return _CURRENT_IMAGE_MODEL if configured.startswith("imagen-") else configured
+
+
+def _image_part(data: dict) -> tuple[bytes, str]:
+    candidates = data.get("candidates") or []
+    parts = ((candidates[0].get("content") or {}).get("parts") or []) if candidates else []
+    for part in parts:
+        inline = part.get("inlineData") or part.get("inline_data") or {}
+        encoded = inline.get("data")
+        if encoded:
+            return base64.b64decode(encoded), inline.get("mimeType") or inline.get("mime_type") or "image/png"
+    raise provider_error("google", "PROVIDER_ERROR", "no image in response")
 
 
 def _aspect(width: int, height: int) -> str:
@@ -38,27 +57,28 @@ class GoogleImageProvider:
         s = get_settings()
         self._key = s.google_api_key or s.image_api_key
         self._base = s.google_api_base.rstrip("/")
-        self._model = s.google_image_model
+        self._configured_model = s.google_image_model
+        self._model = _effective_model(self._configured_model)
         self._timeout = s.google_timeout_seconds
         if not self._key:
             raise provider_error("google", "NOT_CONFIGURED", "GOOGLE_API_KEY is not set")
 
     def generate_image(self, *, prompt: str, negative_prompt: str, width: int, height: int,
                        out_path: str, seed: int | None = None) -> MediaResult:
-        url = f"{self._base}/v1beta/models/{self._model}:predict?key={self._key}"
-        params: dict = {"sampleCount": 1, "aspectRatio": _aspect(width, height)}
-        if seed is not None:
-            params["seed"] = int(seed)
-        payload = {"instances": [{"prompt": prompt}], "parameters": params}
+        url = f"{self._base}/v1beta/models/{self._model}:generateContent?key={self._key}"
+        full_prompt = prompt
         if negative_prompt:
-            payload["instances"][0]["negativePrompt"] = negative_prompt
+            full_prompt += f"\nAvoid: {negative_prompt}"
+        payload = {
+            "contents": [{"role": "user", "parts": [{"text": full_prompt}]}],
+            "generationConfig": {
+                "responseModalities": ["TEXT", "IMAGE"],
+                "imageConfig": {"aspectRatio": _aspect(width, height)},
+            },
+        }
 
         data = http_json(url, method="POST", body=payload, timeout=self._timeout, vendor="google")
-        preds = data.get("predictions") or []
-        if not preds or not preds[0].get("bytesBase64Encoded"):
-            raise provider_error("google", "PROVIDER_ERROR", "no image in response")
-        img_bytes = base64.b64decode(preds[0]["bytesBase64Encoded"])
-        mime = preds[0].get("mimeType", "image/png")
+        img_bytes, mime = _image_part(data)
         with open(out_path, "wb") as f:
             f.write(img_bytes)
 
@@ -66,7 +86,8 @@ class GoogleImageProvider:
             path=out_path, mime_type=mime, provider=self.name, provider_mode=self.mode,
             width=width, height=height,
             cost=0.0,   # Google image pricing is UNKNOWN until verified — never fabricated
-            meta={"model": self._model, "aspect_ratio": params["aspectRatio"],
+            meta={"model": self._model, "configured_model": self._configured_model,
+                  "aspect_ratio": _aspect(width, height),
                   "cost_state": "UNKNOWN", "prompt": prompt[:400],
                   "negative_prompt": negative_prompt[:200], "bytes": len(img_bytes)},
         )
