@@ -67,6 +67,11 @@ export type CampaignDetail = {
   budget: Record<string, number>;
 };
 
+export type CampaignSummary = Pick<
+  CampaignDetail,
+  "id" | "topic" | "status" | "current_step" | "audience_goal" | "fact_score" | "created_at"
+>;
+
 export async function getConfig() {
   const r = await fetch(`${API_BASE}/api/config`, { cache: "no-store" });
   if (!r.ok) throw new Error("config failed");
@@ -90,6 +95,12 @@ export async function createCampaign(body: {
 export async function getCampaign(id: string): Promise<CampaignDetail> {
   const r = await fetch(`${API_BASE}/api/campaigns/${id}`, { cache: "no-store" });
   if (!r.ok) throw new Error(`load failed: ${r.status}`);
+  return r.json();
+}
+
+export async function listCampaigns(limit = 50): Promise<CampaignSummary[]> {
+  const r = await fetch(`${API_BASE}/api/campaigns?limit=${limit}`, { cache: "no-store" });
+  if (!r.ok) throw new Error(`campaign list failed: ${r.status}`);
   return r.json();
 }
 
