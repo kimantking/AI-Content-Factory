@@ -26,7 +26,7 @@ def get_search_provider() -> SearchProvider:
     if s.mock_mode:
         return MockSearchProvider()
     fallback = None
-    if s.search_provider == "tavily" and s.tavily_api_key:
+    if s.tavily_api_key and (s.search_provider == "tavily" or s.agent_reach_enabled):
         from app.providers.tavily_search import TavilySearchProvider
 
         fallback = TavilySearchProvider(api_key=s.tavily_api_key)
@@ -37,19 +37,6 @@ def get_search_provider() -> SearchProvider:
     if fallback is not None:
         return fallback
     return MockSearchProvider()
-
-
-def get_agent_reach_provider() -> SearchProvider:
-    """Explicit provider for office research chat, with optional Tavily fallback."""
-    s = get_settings()
-    fallback = None
-    if s.tavily_api_key:
-        from app.providers.tavily_search import TavilySearchProvider
-
-        fallback = TavilySearchProvider(api_key=s.tavily_api_key)
-    from app.providers.agent_reach_search import AgentReachSearchProvider
-
-    return AgentReachSearchProvider(fallback=fallback)
 
 
 def active_mode() -> str:

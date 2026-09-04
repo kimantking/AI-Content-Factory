@@ -67,6 +67,23 @@ def test_registry_selects_agent_reach_as_real_search(_base_settings):
     assert isinstance(provider, AgentReachSearchProvider)
 
 
+def test_agent_reach_keeps_tavily_fallback_when_search_provider_is_mock(
+    _base_settings, monkeypatch,
+):
+    from app.providers import tavily_search
+
+    fallback = object()
+    monkeypatch.setattr(tavily_search, "TavilySearchProvider", lambda api_key: fallback)
+    s = _base_settings
+    s.mock_mode = False
+    s.agent_reach_enabled = True
+    s.search_provider = "mock"
+    s.tavily_api_key = "tvly-test"
+
+    provider = get_search_provider()
+    assert provider._fallback is fallback
+
+
 def test_ollama_plain_text_chat_is_wrapped_as_valid_json(monkeypatch):
     from app.providers.ollama_llm import OllamaLLMProvider
 
