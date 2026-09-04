@@ -132,7 +132,8 @@ def media_status(campaign_id: str, db: Session = Depends(get_db)):
     return {
         "campaign_id": campaign_id,
         "media_status": (
-            "RUNNING" if step == "media:queued"
+            "SUCCESS" if step == "media:done"
+            else "RUNNING" if step == "media:queued"
             else camp.status if step.startswith("media")
             else "PENDING"
         ),

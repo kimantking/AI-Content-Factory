@@ -54,6 +54,9 @@ services:
       OLLAMA_DEFAULT_MODEL: ${OLLAMA_DEFAULT_MODEL:-gemma3:4b}
     extra_hosts:
       - "host.docker.internal:host-gateway"   # resolves on Linux too
+    volumes:
+      - ./storage:/app/storage
+      - ./outputs:/app/outputs
     ports:
       - "8000:8000"
     depends_on:
@@ -82,6 +85,9 @@ services:
       ACF_WORKER_ID: acf-worker   # stable registration id across prefork children
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - ./storage:/app/storage
+      - ./outputs:/app/outputs
     depends_on:
       postgres:
         condition: service_healthy

@@ -71,11 +71,15 @@ export default function CampaignPage({ params }: { params: Promise<{ id: string 
       </div>
     );
 
+  const mediaActive = data.current_step?.startsWith("media:") ?? false;
+  const textPipelineComplete = mediaActive || data.status === "SUCCESS";
   const scriptSteps: JobStep[] = data.steps
     .filter((s) => s.name !== "create_campaign")
-    .map((s) => ({ key: s.name, label: STEP_KO[s.name] ?? s.name, state: s.status }));
-
-  const mediaActive = data.current_step?.startsWith("media:") ?? false;
+    .map((s) => ({
+      key: s.name,
+      label: STEP_KO[s.name] ?? s.name,
+      state: textPipelineComplete ? "SUCCESS" : s.status,
+    }));
   const mediaState = mediaActive
     ? (media?.media_status || "RUNNING")
     : data.status === "SUCCESS"

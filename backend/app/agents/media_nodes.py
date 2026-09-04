@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 
 from app.agents.media_state import MediaState
 from app.config import get_settings
@@ -53,6 +54,20 @@ from app.services.prompts import load_prompt, register_prompt
 
 _MEDIA_PROMPTS = ["platform_adapt", "scene_planner", "edit_decision"]
 _IMG_COST = {"image": 0.0, "stock": 0.0, "tts": 0.0, "music": 0.0, "render": 0.0}
+_HANGUL_RE = re.compile(r"[가-힣]")
+
+
+def _contains_korean(value: object) -> bool:
+    return bool(_HANGUL_RE.search(str(value or "")))
+
+
+def _require_korean(data: dict, fields: tuple[str, ...], *, task: str) -> None:
+    missing = [field for field in fields if not _contains_korean(data.get(field))]
+    if missing:
+        raise ProviderError(
+            f"{task} returned non-Korean output in: {', '.join(missing)}",
+            error_type="INVALID_OUTPUT",
+        )
 
 
 # --------------------------------------------------------------------------- #
@@ -186,6 +201,7 @@ def platform_adapt_node(state: MediaState) -> dict:
             data = _llm_json(
                 "platform_adapt", "platform_adapt",
                 {
+                    "output_language": "ko-KR", "target_market": "South Korea",
                     "platform": spec.key, "content_type": spec.content_type.value,
                     "family": spec.family.value, "target_duration_s": spec.target_duration_s,
                     "aspect_ratio": spec.aspect_ratio, "visual_style": spec.visual_style,
@@ -200,6 +216,7 @@ def platform_adapt_node(state: MediaState) -> dict:
                 },
                 cid=cid, session=session, agent="Platform Adaptation Agent",
             )
+            _require_korean(data, ("hook", "script", "title", "caption"), task="platform_adapt")
             row = PlatformContent(
                 campaign_id=cid, platform=spec.key, content_type=spec.content_type.value,
                 hook=data.get("hook", ""), script=data.get("script", ""),
@@ -237,6 +254,7 @@ def scene_plan_node(state: MediaState) -> dict:
             data = _llm_json(
                 "scene_plan", "scene_planner",
                 {
+                    "output_language": "ko-KR", "target_market": "South Korea",
                     "platform": spec.key, "target_duration_s": spec.target_duration_s,
                     "aspect_ratio": spec.aspect_ratio, "script": content.script,
                     "usable_fact_texts": state.get("usable_fact_texts", []),
@@ -247,6 +265,12 @@ def scene_plan_node(state: MediaState) -> dict:
             )
             raw = data.get("scenes", [])[:14] or [{"narration": content.script[:120] or "장면",
                                                    "estimated_duration": 4.0}]
+            for item in raw:
+                if not _contains_korean(item.get("narration")):
+                    raise ProviderError(
+                        "scene_plan returned non-Korean narration",
+                        error_type="INVALID_OUTPUT",
+                    )
             # clamp total to platform limit
             total = sum(float(x.get("estimated_duration", 4.0)) for x in raw)
             cap = min(spec.target_duration_s or s.short_video_max_seconds, s.short_video_max_seconds)
@@ -839,6 +863,7 @@ def persist_media_node(state: MediaState) -> dict:
                 c.status = "PLANNED"
         camp = session.get(Campaign, cid)
         camp.current_step = "media:done"
+        camp.status = "SUCCESS" if ok else "FAILED"
         camp.error_message = None if ok else f"media QA: {comp.get('verdict')}, {media_qa.get('issues')}"
     return {"status": "SUCCESS" if ok else "FIX_REQUIRED"}
 

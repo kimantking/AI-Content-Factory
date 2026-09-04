@@ -61,3 +61,14 @@ def test_media_loader_accepts_automatic_queue_handoff():
     assert _phase1_ready(queued) is True
     assert _phase1_ready(resumed) is True
     assert _phase1_ready(incomplete) is False
+
+
+def test_korean_output_guard_rejects_english_only_content():
+    import pytest
+
+    from app.agents.media_nodes import _require_korean
+    from app.providers.errors import ProviderError
+
+    _require_korean({"script": "한국어 대본입니다."}, ("script",), task="test")
+    with pytest.raises(ProviderError):
+        _require_korean({"script": "English only."}, ("script",), task="test")
