@@ -57,6 +57,7 @@ jobs:
       APP_ENV: test
       MOCK_MODE: "true"
       RUN_INLINE: "true"
+      PYTHONPATH: backend
       DATABASE_URL: postgresql+psycopg://acf:acf@localhost:5432/acf
       SYNC_DATABASE_URL: postgresql://acf:acf@localhost:5432/acf
     steps:
