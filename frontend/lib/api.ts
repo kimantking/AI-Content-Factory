@@ -581,7 +581,13 @@ const jdelete = (path: string) =>
   fetch(`${API_BASE}${path}`, { method: "DELETE", headers: authHeaders() }).then(j);
 
 // ---- Phase 11: AI 연결 (provider credentials + safe probes) ---------------- //
-export type ProviderVoice = { voice_id: string; name: string; labels?: Record<string, string>; category?: string };
+export type ProviderVoice = {
+  voice_id: string;
+  name: string;
+  labels?: Record<string, string>;
+  category?: string;
+  preview_url?: string;
+};
 export type ProviderRow = {
   provider: string;
   configured?: boolean;

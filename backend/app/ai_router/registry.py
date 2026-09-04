@@ -74,15 +74,12 @@ class ModelRegistry:
             status = "DOWN"
             models: list[str] = []
             if s.ollama_enabled:
-                try:
-                    from app.providers.ollama_llm import OllamaLLMProvider
+                from app.providers.ollama_llm import check_health
 
-                    h = OllamaLLMProvider(base_url=s.ollama_base_url,
-                                          model=s.ollama_default_model).health()
-                    status = {"CONNECTED": "OK", "DEGRADED": "DEGRADED"}.get(h["status"], "DOWN")
-                    models = h.get("models", [])
-                except Exception:  # noqa: BLE001 — never crash on a health probe
-                    status = "DOWN"
+                h = check_health(base_url=s.ollama_base_url, model=s.ollama_default_model)
+                status = {"CONNECTED": "OK", "DEGRADED": "DEGRADED"}.get(
+                    h["status"], "DOWN")
+                models = h.get("models", [])
             for mid in local_ids:
                 e = self._by_id[mid]
                 e.enabled = bool(s.ollama_enabled)

@@ -64,19 +64,15 @@ def _ollama_status() -> dict:
     out = {"enabled": s.ollama_enabled, "base_url": s.ollama_base_url,
            "default_model": s.ollama_default_model, "reachable": False,
            "model_available": False, "last_error": None}
-    try:
-        from app.providers.ollama_llm import OllamaLLMProvider
-        p = OllamaLLMProvider(base_url=s.ollama_base_url, model=s.ollama_default_model,
-                              timeout_seconds=5)
-        h = p.health()
-        out["reachable"] = h.get("status") in ("OK", "RUNNING", "READY", "UP", "CONNECTED", "AVAILABLE")
-        out["model_available"] = bool(p.has_model(s.ollama_default_model)) if out["reachable"] else False
-        out["last_error"] = h.get("error")
-        out["status"] = "OK" if (out["reachable"] and out["model_available"]) else (
-            "DEGRADED" if out["reachable"] else "ERROR")
-    except Exception as e:  # noqa: BLE001
-        out["status"] = "ERROR"
-        out["last_error"] = type(e).__name__
+    from app.providers.ollama_llm import check_health
+
+    h = check_health(base_url=s.ollama_base_url, model=s.ollama_default_model,
+                     timeout_seconds=5)
+    out["reachable"] = h["reachable"]
+    out["model_available"] = h["model_available"]
+    out["last_error"] = h.get("reason") or h.get("error")
+    out["status"] = "OK" if (out["reachable"] and out["model_available"]) else (
+        "DEGRADED" if out["reachable"] else "ERROR")
     return out
 
 

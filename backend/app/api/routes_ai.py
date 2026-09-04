@@ -102,18 +102,14 @@ def local_ai_status():
            "local_only": s.local_only, "status": "DISABLED", "models": [], "version": None}
     if not s.ollama_enabled:
         return out
-    try:
-        from app.providers.ollama_llm import OllamaLLMProvider
+    from app.providers.ollama_llm import check_health
 
-        h = OllamaLLMProvider(base_url=s.ollama_base_url, model=s.ollama_default_model).health()
-        out.update({"status": {"CONNECTED": "CONNECTED", "DEGRADED": "DEGRADED"}.get(
-            h["status"], "NOT_RUNNING"), "models": h["models"], "version": h.get("version"),
-            "reason": h.get("reason", "")})
-        if h["status"] == "CONNECTED" and s.ollama_default_model not in h["models"]:
-            out["status"] = "NO_MODEL"
-    except Exception as e:  # noqa: BLE001
-        out["status"] = "NOT_RUNNING"
-        out["reason"] = str(e)
+    h = check_health(base_url=s.ollama_base_url, model=s.ollama_default_model)
+    out.update({"status": {"CONNECTED": "CONNECTED", "DEGRADED": "DEGRADED"}.get(
+        h["status"], "NOT_RUNNING"), "models": h.get("models", []), "version": h.get("version"),
+        "reason": h.get("reason", "")})
+    if h["reachable"] and not h["model_available"]:
+        out["status"] = "NO_MODEL"
     return out
 
 

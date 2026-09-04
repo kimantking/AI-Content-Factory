@@ -109,15 +109,10 @@ def _ollama() -> dict:
     base = {"provider": "ollama", "role": "local LLM",
             "enabled": s.ollama_enabled, "base_url": s.ollama_base_url,
             "default_model": s.ollama_default_model}
-    try:
-        from app.providers.ollama_llm import OllamaLLMProvider
+    from app.providers.ollama_llm import check_health
 
-        h = OllamaLLMProvider(base_url=s.ollama_base_url, model=s.ollama_default_model).health()
-        reachable = h.get("status") in ("CONNECTED", "OK", "RUNNING", "READY", "UP")
-        has = s.ollama_default_model in (h.get("models") or [])
-    except Exception as e:  # noqa: BLE001
-        reachable, has = False, False
-        h = {"error": type(e).__name__}
+    h = check_health(base_url=s.ollama_base_url, model=s.ollama_default_model)
+    reachable, has = h["reachable"], h["model_available"]
 
     if not s.ollama_enabled:
         if reachable:
@@ -127,7 +122,8 @@ def _ollama() -> dict:
         return {**base, "status": "NOT_CONFIGURED", "service_reachable": False}
 
     if not reachable:
-        return {**base, "status": "ERROR", "service_reachable": False, "detail": h.get("error")}
+        return {**base, "status": "ERROR", "service_reachable": False,
+                "detail": h.get("reason") or h.get("error")}
     # a real /api/tags call succeeded -> CONNECTED (model present) or DEGRADED (model missing)
     return {**base, "status": "CONNECTED" if has else "DEGRADED",
             "service_reachable": True, "model_present": has}
@@ -191,7 +187,8 @@ def _elevenlabs() -> dict:
                 "voice_selection_required": not bool(vm.get("voice_selected")),
                 "last_success_at": v["last_success_at"], "last_checked_at": v.get("last_checked_at"),
                 "note": "verified by GET /v1/voices (no synthesis)"}
-    if v.get("status") in ("AUTH_FAILED", "RATE_LIMITED", "QUOTA", "BLOCKED", "ERROR"):
+    if v.get("status") in ("AUTH_FAILED", "PERMISSION_REQUIRED", "RATE_LIMITED",
+                              "QUOTA", "BLOCKED", "ERROR"):
         return {**base, "status": v["status"], "key_present": True,
                 "last_error_code": v.get("last_error_code"),
                 "last_checked_at": v.get("last_checked_at")}

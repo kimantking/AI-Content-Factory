@@ -28,8 +28,8 @@ class ProviderCredential(Base):
 
     api_key_encrypted: Mapped[str | None] = mapped_column(Text, nullable=True)
     last4: Mapped[str] = mapped_column(String(8), default="")
-    # NOT_CONFIGURED | CONFIGURED | CONNECTED | AUTH_FAILED | RATE_LIMITED |
-    # BILLING | MODEL_UNAVAILABLE | QUOTA | BLOCKED | ERROR
+    # NOT_CONFIGURED | CONFIGURED | CONNECTED | AUTH_FAILED | PERMISSION_REQUIRED |
+    # RATE_LIMITED | BILLING | MODEL_UNAVAILABLE | QUOTA | BLOCKED | ERROR
     status: Mapped[str] = mapped_column(String(20), default="NOT_CONFIGURED")
 
     configured_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)

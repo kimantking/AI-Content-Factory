@@ -16,6 +16,7 @@ from app.providers import credentials as cred
 # normalised probe status vocabulary (superset of credential.status)
 CONNECTED = "CONNECTED"
 AUTH_FAILED = "AUTH_FAILED"
+PERMISSION_REQUIRED = "PERMISSION_REQUIRED"
 RATE_LIMITED = "RATE_LIMITED"
 BILLING = "BILLING"
 MODEL_UNAVAILABLE = "MODEL_UNAVAILABLE"
@@ -221,6 +222,14 @@ def _probe_elevenlabs(workspace_id: str | None) -> dict:
     except Exception as e:  # noqa: BLE001
         code = getattr(e, "provider_code", "ELEVENLABS_PROVIDER_ERROR")
         low = str(e).lower()
+        if "missing the permission" in low or "voices_read" in low:
+            return _result(
+                "elevenlabs", PERMISSION_REQUIRED,
+                detail="ElevenLabs API 키에 Voices: Read(voices_read) 권한이 필요합니다.",
+                code="ELEVENLABS_PERMISSION_REQUIRED",
+                extra={"required_permissions": ["voices_read", "text_to_speech"]},
+                workspace_id=workspace_id,
+            )
         if ("invalid_api_key" in low or "authentication_error" in low
                 or "api key id used as api key" in low or code == "ELEVENLABS_AUTH_FAILED"):
             status, code = AUTH_FAILED, "ELEVENLABS_AUTH_FAILED"
@@ -235,7 +244,8 @@ def _probe_elevenlabs(workspace_id: str | None) -> dict:
 
     voices = [
         {"voice_id": v.get("voice_id"), "name": v.get("name"),
-         "labels": v.get("labels") or {}, "category": v.get("category")}
+         "labels": v.get("labels") or {}, "category": v.get("category"),
+         "preview_url": v.get("preview_url")}
         for v in (data.get("voices") or [])
     ]
     saved_voice = ""
@@ -264,25 +274,21 @@ def _probe_elevenlabs(workspace_id: str | None) -> dict:
 
 def _probe_ollama(workspace_id: str | None) -> dict:
     s = get_settings()
-    try:
-        from app.providers.ollama_llm import OllamaLLMProvider
-        h = OllamaLLMProvider(base_url=s.ollama_base_url, model=s.ollama_default_model).health()
-        reachable = h.get("status") in ("CONNECTED", "OK", "RUNNING", "READY", "UP")
-        has = s.ollama_default_model in (h.get("models") or [])
-        if not s.ollama_enabled:
-            return {"provider": "ollama", "status": "DISABLED", "ok": False,
-                    "detail": "OLLAMA_ENABLED=false"}
-        if reachable and has:
-            return {"provider": "ollama", "status": CONNECTED, "ok": True,
-                    "detail": f"{s.ollama_default_model} available",
-                    "model": s.ollama_default_model, "model_available": True}
-        if reachable:
-            return {"provider": "ollama", "status": "DEGRADED", "ok": False,
-                    "detail": f"service up but {s.ollama_default_model} not pulled"}
-        return {"provider": "ollama", "status": ERROR, "ok": False,
-                "detail": h.get("reason") or h.get("error") or "not reachable"}
-    except Exception as e:  # noqa: BLE001
-        return {"provider": "ollama", "status": ERROR, "ok": False, "detail": str(e)[:200]}
+    from app.providers.ollama_llm import check_health
+
+    h = check_health(base_url=s.ollama_base_url, model=s.ollama_default_model)
+    if not s.ollama_enabled:
+        return {"provider": "ollama", "status": "DISABLED", "ok": False,
+                "detail": "OLLAMA_ENABLED=false"}
+    if h["reachable"] and h["model_available"]:
+        return {"provider": "ollama", "status": CONNECTED, "ok": True,
+                "detail": f"{s.ollama_default_model} available",
+                "model": s.ollama_default_model, "model_available": True}
+    if h["reachable"]:
+        return {"provider": "ollama", "status": "DEGRADED", "ok": False,
+                "detail": f"service up but {s.ollama_default_model} not pulled"}
+    return {"provider": "ollama", "status": ERROR, "ok": False,
+            "detail": h.get("reason") or h.get("error") or "not reachable"}
 
 
 _PROBES = {
