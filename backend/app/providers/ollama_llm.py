@@ -20,6 +20,14 @@ from app.providers.errors import InvalidOutputError, ProviderError, TimeoutError
 
 _APPROX_CHARS_PER_TOKEN = 4
 _REACHABLE_STATUSES = frozenset({"CONNECTED", "OK", "RUNNING", "READY", "UP", "AVAILABLE"})
+_TASK_MIN_TOKENS = {
+    # Research has several lists with citations.  The router's generic 400-token
+    # estimate is far too small and caused Gemma to stop halfway through JSON.
+    "research": 4096,
+    "fact_check": 3072,
+    "strategy": 2048,
+    "script": 3072,
+}
 
 
 def _approx_tokens(text: str) -> int:
@@ -111,11 +119,13 @@ class OllamaLLMProvider:
         """Structured completion. Uses Ollama's `format:"json"` to force a JSON
         object, matching the cloud adapters' contract."""
         plain_text = bool(context.get("plain_text"))
+        requested_tokens = int(context.get("max_tokens", 1200))
+        output_tokens = max(requested_tokens, _TASK_MIN_TOKENS.get(task, 0))
         payload = {
             "model": self.model,
             "stream": False,
             "options": {"temperature": float(context.get("temperature", 0.4)),
-                        "num_predict": int(context.get("max_tokens", 1200))},
+                        "num_predict": output_tokens},
             "messages": [
                 {"role": "system",
                  "content": (system or "") + ("" if plain_text else "\n\nRespond with a single valid JSON object only.")},
@@ -126,7 +136,6 @@ class OllamaLLMProvider:
             payload["format"] = "json"
         started = time.monotonic()
         data = self._request("/api/chat", payload)
-        elapsed = time.monotonic() - started
         text = (data.get("message", {}) or {}).get("content", "").strip()
         if plain_text:
             if not text:
@@ -135,13 +144,37 @@ class OllamaLLMProvider:
             # natural text so long scripts cannot become invalid when a model
             # stops at its token limit; the application performs the wrapping.
             text = json.dumps({"reply": text}, ensure_ascii=False)
-        if text.startswith("```"):
-            text = text.strip("`")
-            text = text[text.find("{"):] if "{" in text else text
-        try:
-            json.loads(text)
-        except ValueError as e:
-            raise InvalidOutputError(f"non-JSON ollama output for task={task}: {e}") from e
+        if not plain_text:
+            text = self._validated_json(text)
+            if text is None:
+                # One bounded recovery attempt. Re-run the original request in
+                # deterministic, compact JSON mode instead of trying to invent
+                # missing fields from a truncated response locally.
+                retry_payload = {**payload, "options": {
+                    **payload["options"], "temperature": 0,
+                    "num_predict": max(output_tokens, 6144),
+                }}
+                retry_payload["messages"] = [
+                    payload["messages"][0],
+                    {"role": "user", "content": (
+                        user + "\n\nThe previous response was truncated or invalid. "
+                        "Return one complete, compact JSON object. Keep every string concise."
+                    )},
+                ]
+                data = self._request("/api/chat", retry_payload)
+                retry_text = (data.get("message", {}) or {}).get("content", "").strip()
+                text = self._validated_json(retry_text)
+                if text is None:
+                    try:
+                        json.loads(retry_text)
+                    except ValueError as e:
+                        raise InvalidOutputError(
+                            f"non-JSON ollama output for task={task} after automatic retry: {e}"
+                        ) from e
+                    raise InvalidOutputError(
+                        f"empty ollama output for task={task} after automatic retry"
+                    )
+        elapsed = time.monotonic() - started
         return LLMResponse(
             text=text,
             input_tokens=int(data.get("prompt_eval_count") or _approx_tokens(system + user)),
@@ -149,6 +182,20 @@ class OllamaLLMProvider:
             provider=self.name,
             model=f"{self.model}@{round(elapsed, 2)}s",
         )
+
+    @staticmethod
+    def _validated_json(text: str) -> str | None:
+        """Return a normalized JSON object string, or None when recovery is needed."""
+        candidate = (text or "").strip()
+        if candidate.startswith("```"):
+            first = candidate.find("{")
+            last = candidate.rfind("}")
+            candidate = candidate[first:last + 1] if first >= 0 and last > first else candidate
+        try:
+            parsed = json.loads(candidate)
+        except ValueError:
+            return None
+        return json.dumps(parsed, ensure_ascii=False, separators=(",", ":"))
 
     def ping_inference(self) -> dict:
         """Tiny end-to-end check for the settings screen / benchmark."""

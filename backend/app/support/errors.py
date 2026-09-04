@@ -6,7 +6,7 @@ from __future__ import annotations
 # stable code -> (matcher hints, suggested action in Korean)
 _ACTIONS: dict[str, str] = {
     "OLLAMA_UNAVAILABLE": "Ollama가 실행 중인지 확인하세요 (`ollama serve`). 로컬 모델이 꺼져 있으면 클라우드 폴백 설정을 확인하세요.",
-    "MODEL_OUTPUT_SCHEMA_INVALID": "모델이 형식에 맞지 않는 응답을 반환했습니다. 자동으로 다음 엔진으로 승급됩니다 — 반복되면 품질 프리셋을 높이세요.",
+    "MODEL_OUTPUT_SCHEMA_INVALID": "모델 응답이 잘리거나 형식이 맞지 않았습니다. 자동 복구 후에도 실패한 경우 재시도하세요. 반복되면 주제를 좁히거나 더 큰 모델을 선택하세요.",
     "PROVIDER_RATE_LIMITED": "제공자가 요청을 제한하고 있습니다. 자동 재시도(백오프) 상태를 확인하세요.",
     "VIDEO_PROVIDER_TIMEOUT": "영상 제공자 응답이 지연됩니다. 자동 재시도 상태를 확인하고, 계속되면 장면 수를 줄이세요.",
     "DB_CONNECTION_FAILED": "데이터베이스 상태를 확인하세요. 컨테이너/네트워크 재시작 후 자동 재연결됩니다.",
@@ -45,8 +45,8 @@ _MAP: list[tuple[tuple[str, ...], str]] = [
     (("elevenlabs_permission_required", "voices_read"), "ELEVENLABS_PERMISSION_REQUIRED"),
     (("elevenlabs_rate_limited",), "ELEVENLABS_RATE_LIMITED"),
     (("elevenlabs_provider_error", "elevenlabs_timeout"), "ELEVENLABS_PROVIDER_ERROR"),
-    (("ollama", "local model", "local_model"), "OLLAMA_UNAVAILABLE"),
     (("invalid_output", "schema_invalid", "invalid json"), "MODEL_OUTPUT_SCHEMA_INVALID"),
+    (("ollama", "local model", "local_model"), "OLLAMA_UNAVAILABLE"),
     (("rate_limit", "429", "ratelimited"), "PROVIDER_RATE_LIMITED"),
     (("video", "render provider"), "VIDEO_PROVIDER_TIMEOUT"),
     (("db_connection", "operationalerror", "could not connect", "psycopg"), "DB_CONNECTION_FAILED"),

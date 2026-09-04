@@ -929,6 +929,8 @@ export const libraryStats = (workspaceId?: string) =>
   jget(`/api/library/stats${workspaceId ? `?workspace_id=${workspaceId}` : ""}`);
 export const contentDetail = (campaignId: string): Promise<Record<string, unknown>> =>
   jget(`/api/library/${campaignId}`);
+export const deleteContent = (campaignId: string): Promise<{ ok: boolean; deleted_records: number }> =>
+  jdelete(`/api/library/${campaignId}`);
 export const addPlatformToContent = (campaignId: string, platform: string, mode = "GENERATE_AND_PUBLISH") =>
   jpost(`/api/library/${campaignId}/add-platform`, { platform, mode });
 export const contentVideoUrl = (campaignId: string) => `${API_BASE}/api/library/${campaignId}/media/video`;
