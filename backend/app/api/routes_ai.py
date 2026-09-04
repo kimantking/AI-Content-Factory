@@ -52,9 +52,9 @@ def agent_chat(agent_id: str, payload: dict = Body(...), db: Session = Depends(g
     live_sources = []
     if agent_id == "research" and settings.agent_reach_enabled and not settings.mock_mode:
         try:
-            from app.providers.registry import get_agent_reach_provider
+            from app.providers.registry import get_search_provider
 
-            live_sources = get_agent_reach_provider().search(message, max_results=6)
+            live_sources = get_search_provider().search(message, max_results=6)
         except Exception:  # research chat still answers if every external channel is temporarily down
             live_sources = []
     source_context = [
