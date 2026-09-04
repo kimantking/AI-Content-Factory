@@ -128,7 +128,7 @@ def _record_asset(session, *, cid, content_id, scene_id, asset_type, provider, m
 def _phase1_ready(camp: Campaign) -> bool:
     """Accept the atomic text-to-media hand-off as well as manual starts."""
     return camp.status == "SUCCESS" or (
-        camp.status == "RUNNING" and camp.current_step == "media:queued"
+        camp.status == "RUNNING" and (camp.current_step or "").startswith("media:")
     )
 
 

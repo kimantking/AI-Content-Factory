@@ -55,7 +55,9 @@ def test_media_loader_accepts_automatic_queue_handoff():
     from app.agents.media_nodes import _phase1_ready
 
     queued = Campaign(status="RUNNING", current_step="media:queued")
+    resumed = Campaign(status="RUNNING", current_step="media:images")
     incomplete = Campaign(status="RUNNING", current_step="qa_script")
 
     assert _phase1_ready(queued) is True
+    assert _phase1_ready(resumed) is True
     assert _phase1_ready(incomplete) is False
