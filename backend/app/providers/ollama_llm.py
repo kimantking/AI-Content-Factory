@@ -19,6 +19,7 @@ from app.providers.base import LLMResponse
 from app.providers.errors import InvalidOutputError, ProviderError, TimeoutError_
 
 _APPROX_CHARS_PER_TOKEN = 4
+_REACHABLE_STATUSES = frozenset({"CONNECTED", "OK", "RUNNING", "READY", "UP", "AVAILABLE"})
 
 
 def _approx_tokens(text: str) -> int:
@@ -157,3 +158,18 @@ class OllamaLLMProvider:
             return {"ok": True, "sample": r.text[:120], "model": self.model}
         except ProviderError as e:
             return {"ok": False, "error": str(e), "error_type": getattr(e, "error_type", "PROVIDER_ERROR")}
+
+
+def check_health(*, base_url: str, model: str, timeout_seconds: int = 120) -> dict:
+    """Run one Ollama health request and add the shared availability signals."""
+    try:
+        health = OllamaLLMProvider(base_url=base_url, model=model,
+                                   timeout_seconds=timeout_seconds).health()
+    except Exception as e:  # noqa: BLE001 — health checks never crash callers
+        health = {"status": "NOT_RUNNING", "models": [], "reason": str(e)}
+    models = health.get("models") or []
+    return {
+        **health,
+        "reachable": health.get("status") in _REACHABLE_STATUSES,
+        "model_available": model in models,
+    }

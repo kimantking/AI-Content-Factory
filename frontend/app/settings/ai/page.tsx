@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
   ProviderRow,
   ProviderVoice,
@@ -19,6 +19,7 @@ const STATUS_KO: Record<string, { label: string; tone: string }> = {
   CHECKING: { label: "연결 확인 중", tone: "text-brand-secure" },
   CONNECTED: { label: "연결됨", tone: "text-success" },
   AUTH_FAILED: { label: "인증 실패", tone: "text-brand-secure" },
+  PERMISSION_REQUIRED: { label: "키 권한 필요", tone: "text-brand-secure" },
   RATE_LIMITED: { label: "요청 한도 초과", tone: "text-brand-secure" },
   BILLING: { label: "결제 확인 필요", tone: "text-brand-secure" },
   QUOTA: { label: "쿼터 초과", tone: "text-brand-secure" },
@@ -58,12 +59,18 @@ export default function AIConnectionsPage() {
   const [probe, setProbe] = useState<Record<string, Record<string, unknown>>>({});
   const [voices, setVoices] = useState<ProviderVoice[]>([]);
   const [voiceId, setVoiceId] = useState<string>("");
+  const [previewing, setPreviewing] = useState<string>("");
   const [msg, setMsg] = useState<string>("");
+  const previewAudio = useRef<HTMLAudioElement | null>(null);
 
   const load = useCallback(async () => {
     try {
       const r = await listProviders(false);
       setRows(r.providers);
+      const elevenlabs = r.providers.find((item) => item.provider === "elevenlabs");
+      const meta = elevenlabs?.meta;
+      setVoices((meta?.voices as ProviderVoice[]) ?? []);
+      setVoiceId(String(meta?.voice_id ?? ""));
     } catch (e) {
       setMsg(`목록 로드 실패: ${String(e)}`);
     }
@@ -71,8 +78,12 @@ export default function AIConnectionsPage() {
   useEffect(() => {
     load();
   }, [load]);
+  useEffect(() => () => previewAudio.current?.pause(), []);
 
   const row = (p: string) => rows.find((x) => x.provider === p);
+  const availableVoices = () => voices.length
+    ? voices
+    : ((row("elevenlabs")?.meta?.voices as ProviderVoice[]) ?? []);
 
   const saveKey = async (p: string) => {
     const key = (draft[p] ?? "").trim();
@@ -150,6 +161,34 @@ export default function AIConnectionsPage() {
     }
   };
 
+  const previewVoice = async () => {
+    const voice = availableVoices().find((v) => v.voice_id === voiceId);
+    if (!voice?.preview_url) {
+      setMsg("이 목소리는 ElevenLabs 미리듣기 음원을 제공하지 않습니다.");
+      return;
+    }
+    previewAudio.current?.pause();
+    if (previewing === voiceId) {
+      previewAudio.current = null;
+      setPreviewing("");
+      return;
+    }
+    const audio = new Audio(voice.preview_url);
+    previewAudio.current = audio;
+    setPreviewing(voiceId);
+    audio.onended = () => setPreviewing("");
+    audio.onerror = () => {
+      setPreviewing("");
+      setMsg("목소리 미리듣기를 재생하지 못했습니다.");
+    };
+    try {
+      await audio.play();
+    } catch {
+      setPreviewing("");
+      setMsg("브라우저에서 미리듣기 재생을 허용해 주세요.");
+    }
+  };
+
   return (
     <div className="space-y-5">
       <div>
@@ -186,7 +225,8 @@ export default function AIConnectionsPage() {
             {p === "elevenlabs" && (
               <p className="mt-1 text-[11px] text-brand-secure">
                 API Key ID는 인증에 사용할 수 없습니다. ElevenLabs에서 한 번만 표시되는
-                <strong> sk_로 시작하는 Secret API Key</strong>를 복사해 입력하세요.
+                <strong> sk_로 시작하는 Secret API Key</strong>를 복사하고,
+                <strong> Voices: Read와 Text to Speech 권한</strong>을 켜세요.
               </p>
             )}
 
@@ -287,10 +327,20 @@ export default function AIConnectionsPage() {
                     ).map((v) => (
                       <option key={v.voice_id} value={v.voice_id}>
                         {v.name}
-                        {v.labels?.language ? ` · ${v.labels.language}` : ""}
+                        {[v.labels?.language, v.labels?.gender, v.labels?.accent, v.category]
+                          .filter(Boolean)
+                          .map((label) => ` · ${label}`)}
                       </option>
                     ))}
                   </select>
+                  <button
+                    type="button"
+                    className="input !w-auto !py-1 text-xs"
+                    disabled={!voiceId}
+                    onClick={previewVoice}
+                  >
+                    {previewing === voiceId ? "■ 미리듣기 정지" : "▶ 선택한 목소리 듣기"}
+                  </button>
                   {!voiceId && (
                     <span className="text-[11px] text-brand-secure">TTS: 목소리 선택 필요</span>
                   )}

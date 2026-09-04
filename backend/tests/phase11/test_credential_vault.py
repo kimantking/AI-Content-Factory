@@ -198,6 +198,26 @@ def test_google_probe_free_get_and_model_validation(_base_settings, monkeypatch)
     assert all("/v1beta/models" in u for u in calls)
 
 
+def test_elevenlabs_probe_reports_missing_voice_permission(_base_settings, monkeypatch):
+    from app.providers import credentials as cred, probe
+    from app.providers.media import _http
+
+    cred.set_key("elevenlabs", "sk_valid-format-key-333333", workspace_id="")
+
+    def missing_permission(*args, **kwargs):
+        raise _http.provider_error(
+            "elevenlabs", "AUTH_FAILED",
+            "HTTP 401: API key is missing the permission voices_read",
+        )
+
+    monkeypatch.setattr(_http, "http_json", missing_permission)
+    res = probe.run("elevenlabs", workspace_id="")
+
+    assert res["status"] == "PERMISSION_REQUIRED"
+    assert res["required_permissions"] == ["voices_read", "text_to_speech"]
+    assert cred.describe("elevenlabs")["last_error_code"] == "ELEVENLABS_PERMISSION_REQUIRED"
+
+
 def test_probe_result_carries_no_secret(_base_settings, monkeypatch):
     from app.providers import credentials as cred, probe
 
