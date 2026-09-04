@@ -16,8 +16,14 @@ const SBADGE: Record<string, string> = {
   EXPERIMENTAL: "bg-surface-2 text-ink-subtle",
   DEPRECATED: "bg-surface-2 text-brand-secure",
 };
+const MEMORY_STATUS_KO: Record<string, string> = {
+  STRONG: "강하게 학습됨", MODERATE: "학습됨", WEAK: "근거 부족",
+  EXPERIMENTAL: "시험 중", DEPRECATED: "사용 중지",
+};
 const Badge = ({ s }: { s: string }) => (
-  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SBADGE[s] ?? SBADGE.EXPERIMENTAL}`}>{s}</span>
+  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${SBADGE[s] ?? SBADGE.EXPERIMENTAL}`}>
+    {MEMORY_STATUS_KO[s] ?? s}
+  </span>
 );
 
 function MemCard({ m, onAct }: { m: MemoryRow; onAct: (id: string, a: string) => void }) {
@@ -30,10 +36,10 @@ function MemCard({ m, onAct }: { m: MemoryRow; onAct: (id: string, a: string) =>
       <p className="mt-1 text-sm">{m.statement}</p>
       <div className="mt-1 flex gap-2">
         <button type="button" onClick={() => onAct(m.id, "pin")} className="rounded border border-hairline px-2 py-0.5 text-xs">
-          Pin
+          항상 사용
         </button>
         <button type="button" onClick={() => onAct(m.id, "disable")} className="rounded border border-hairline px-2 py-0.5 text-xs">
-          Disable
+          사용 중지
         </button>
       </div>
     </div>
@@ -78,11 +84,12 @@ export default function LearningPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-bold">학습 · 메모리</h1>
-        <a href="/analytics" className="text-sm text-primary underline">
-          ← Analytics
-        </a>
+      <div className="flex flex-wrap items-start gap-3">
+        <div>
+          <h1 className="text-lg font-bold">학습 결과 보기</h1>
+          <p className="mt-1 text-sm text-ink-subtle">AI가 자료에서 찾아낸 제작 규칙과 기억을 확인합니다.</p>
+        </div>
+        <a href="/learn-studio" className="btn btn-primary ml-auto">새 자료 학습시키기</a>
       </div>
 
       <button
@@ -91,11 +98,11 @@ export default function LearningPage() {
         disabled={busy}
         className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary disabled:opacity-50"
       >
-        Daily Learning 실행
+        새 학습 결과 정리하기
       </button>
       {dash.last_run && (
         <p className="text-xs text-subtle">
-          last run {dash.last_run.run_date} · {JSON.stringify(dash.last_run.summary)}
+          최근 정리 {dash.last_run.run_date} · {JSON.stringify(dash.last_run.summary)}
         </p>
       )}
 

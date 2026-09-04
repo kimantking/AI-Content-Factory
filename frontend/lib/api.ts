@@ -264,9 +264,21 @@ export type PublishJobRow = {
   caption: string;
 };
 
-const j = (r: Response) => {
-  if (!r.ok) throw new Error(`${r.url} -> ${r.status}`);
-  return r.json();
+const HTTP_ERROR_KO: Record<string, string> = {
+  "topic is required unless execution_mode is LEARN_ONLY / REFERENCE_ONLY": "콘텐츠 주제를 입력해 주세요.",
+  "urls required": "학습할 참고자료 URL을 하나 이상 입력해 주세요.",
+  "X-Workspace-Id header required": "작업공간을 먼저 선택해 주세요.",
+};
+
+// Keep the shared fetch helper compatible with the endpoint-specific return types below.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const j = async (r: Response): Promise<any> => {
+  const data = await r.json().catch(() => null) as Record<string, unknown> | null;
+  if (!r.ok) {
+    const detail = typeof data?.detail === "string" ? data.detail : "";
+    throw new Error(HTTP_ERROR_KO[detail] ?? (detail || `요청을 처리하지 못했습니다. (오류 ${r.status})`));
+  }
+  return data;
 };
 
 export const getCapabilities = (): Promise<PlatformCapabilityRow[]> =>

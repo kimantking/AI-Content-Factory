@@ -63,7 +63,7 @@ export default function AnalyticsPage() {
       <div className="flex items-center justify-between">
         <h1 className="text-lg font-bold">분석</h1>
         <a href="/learning" className="text-sm text-primary underline">
-          학습 · 메모리 →
+          학습 결과 보기 →
         </a>
       </div>
 
