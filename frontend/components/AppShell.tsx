@@ -25,8 +25,9 @@ const NAV: NavGroup[] = [
   {
     label: "운영",
     items: [
-      { href: "/learn-studio", label: "AI 학습실", icon: "sparkles" },
-      { href: "/references", label: "자료실", icon: "book" },
+      { href: "/learn-studio", label: "AI 학습시키기", icon: "sparkles" },
+      { href: "/references", label: "학습 자료 보기", icon: "book" },
+      { href: "/learning", label: "학습 결과 보기", icon: "activity" },
       { href: "/calendar", label: "캘린더", icon: "calendar" },
       { href: "/portfolio", label: "채널", icon: "layers" },
       { href: "/publishing", label: "게시", icon: "send" },

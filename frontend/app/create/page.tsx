@@ -62,10 +62,26 @@ export default function QuickCreate() {
   };
 
   const submit = async () => {
+    const cleanTopic = topic.trim();
+    const enabledPlatforms = Object.values(sel).some((types) =>
+      Object.values(types).some((value) => value !== "DISABLED"),
+    );
+    if (!learnOnly && cleanTopic.length < 2) {
+      setErr("콘텐츠 주제를 두 글자 이상 입력해 주세요.");
+      return;
+    }
+    if (learnOnly && refCount === 0) {
+      setErr("학습할 참고자료 URL을 하나 이상 입력해 주세요.");
+      return;
+    }
+    if (!learnOnly && !enabledPlatforms) {
+      setErr("콘텐츠를 만들 SNS를 하나 이상 선택해 주세요.");
+      return;
+    }
     setBusy(true); setErr(null); setResult(null);
     try {
       const r = await composeCampaign({
-        topic: topic.trim() || undefined, execution_mode: mode,
+        topic: cleanTopic || undefined, execution_mode: mode,
         reference_urls: urls.map((u) => u.trim()).filter(Boolean),
         platform_selection: sel, workspace_id: wsId || undefined,
       });
@@ -163,10 +179,13 @@ export default function QuickCreate() {
 
       {err && <p className="rounded bg-surface-2 p-3 text-sm text-brand-secure">{err}</p>}
 
-      <button disabled={busy} onClick={submit}
+      <button disabled={busy || (!learnOnly && topic.trim().length < 2) || (learnOnly && refCount === 0)} onClick={submit}
         className="w-full rounded-md bg-primary px-5 py-3 text-sm font-bold text-on-primary disabled:opacity-50">
         {busy ? "처리 중…" : learnOnly ? "학습만 하기" : "콘텐츠 만들기"}
       </button>
+      {!learnOnly && topic.trim().length < 2 && (
+        <p className="text-center text-xs text-ink-subtle">위에 만들고 싶은 콘텐츠 주제를 먼저 입력해 주세요.</p>
+      )}
 
       {result && (
         <section className="rounded-lg border border-hairline bg-surface-1 p-4 text-xs">

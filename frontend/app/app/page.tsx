@@ -6,7 +6,6 @@ import { useEffect, useMemo, useState } from "react";
 import {
   composeCampaign,
   contentLibrary,
-  createCampaign,
   estimateCost,
   getAnalyticsOverview,
   getAutopilotStatus,
@@ -42,6 +41,26 @@ const QUALITY = [
 const GOAL_KO: Record<string, string> = {
   Views: "조회수", Followers: "팔로워", Revenue: "수익", Profit: "순이익", Brand: "브랜드", Balanced: "균형",
 };
+const PLATFORM_SELECTION: Record<string, [string, string]> = {
+  YouTube: ["youtube_long", "LONG_VIDEO"],
+  "YouTube Shorts": ["youtube_shorts", "SHORT_VIDEO"],
+  TikTok: ["tiktok", "VIDEO"], Instagram: ["instagram_reel", "REELS"],
+  Facebook: ["facebook_reel", "REELS"], Threads: ["threads", "THREAD"],
+  X: ["x", "POST"], Pinterest: ["pinterest", "VIDEO_PIN"],
+  LinkedIn: ["linkedin", "VIDEO"], "Naver Blog": ["naver_blog", "ARTICLE"],
+  "Naver Clip": ["naver_clip", "CLIP"],
+};
+
+function buildPlatformSelection(platforms: string[], mode: string) {
+  const out: Record<string, Record<string, string>> = {};
+  const publishMode = mode === "GUIDED" || mode === "DRAFT_ONLY"
+    ? "GENERATE_ONLY" : "GENERATE_AND_PUBLISH";
+  for (const platform of platforms) {
+    const mapped = PLATFORM_SELECTION[platform];
+    if (mapped) out[mapped[0]] = { [mapped[1]]: publishMode };
+  }
+  return out;
+}
 
 function stageState(snap: SupportSnapshot | null, key: string): string {
   const p = snap?.pipeline?.find((s) => s.step.toLowerCase().includes(key));
@@ -53,6 +72,7 @@ export default function Home() {
 
   // composer
   const [topic, setTopic] = useState("");
+  const [wsId, setWsId] = useState("");
   const [platforms, setPlatforms] = useState<string[]>(["YouTube"]);
   const [goal, setGoal] = useState("Balanced");
   const [mode, setMode] = useState("FULL_AUTO");
@@ -78,6 +98,7 @@ export default function Home() {
   const [auto, setAuto] = useState<AutopilotStatus | null>(null);
 
   useEffect(() => {
+    setWsId(window.localStorage?.getItem("acf_workspace_id") ?? "");
     getConfig()
       .then((c) => {
         setOpts({ platforms: c.platforms, goals: c.goals });
@@ -110,8 +131,7 @@ export default function Home() {
       setEstUsd(null);
       return;
     }
-    const sel: Record<string, Record<string, string>> = {};
-    platforms.forEach((p) => (sel[p] = { default: "FULL" }));
+    const sel = buildPlatformSelection(platforms, mode);
     const h = setTimeout(() => {
       setEstUsd(null);
       const timeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error("timeout")), 8000));
@@ -147,35 +167,36 @@ export default function Home() {
   }
 
   async function start() {
-    if (topic.trim().length < 2 && mode !== "LEARN_ONLY") {
-      setErr("주제를 입력하세요.");
+    if (mode !== "LEARN_ONLY" && topic.trim().length < 2) {
+      setErr("콘텐츠 주제를 두 글자 이상 입력해 주세요.");
+      return;
+    }
+    if (mode === "LEARN_ONLY" && refs.length === 0) {
+      setErr("학습할 참고자료 URL을 하나 이상 추가해 주세요.");
+      return;
+    }
+    if (mode !== "LEARN_ONLY" && platforms.length === 0) {
+      setErr("콘텐츠를 만들 SNS를 하나 이상 선택해 주세요.");
       return;
     }
     setBusy(true);
     setErr(null);
     try {
-      if (refs.length > 0 || mode !== "FULL_AUTO") {
-        const r = await composeCampaign({
-          topic: topic.trim() || undefined,
-          execution_mode: mode,
-          reference_urls: refs.length ? refs : undefined,
-          audience_goal: goal.toUpperCase(),
-          preset: "default",
-        });
-        if (r.campaign_id) {
-          router.push(`/campaigns/${r.campaign_id}`);
-          return;
-        }
-        setErr(r.pipeline_started ? "학습 작업을 시작했습니다. AI 학습실에서 진행 상황을 확인하세요." : "요청을 접수했습니다.");
-        setBusy(false);
+      const r = await composeCampaign({
+        topic: topic.trim() || undefined,
+        execution_mode: mode === "LEARN_ONLY" ? "LEARN_ONLY"
+          : mode === "DRAFT_ONLY" ? "CREATE_ONLY" : "CREATE_AND_LEARN",
+        reference_urls: refs.length ? refs : undefined,
+        audience_goal: goal.toUpperCase(),
+        platform_selection: buildPlatformSelection(platforms, mode),
+        workspace_id: wsId || undefined,
+      });
+      if (r.campaign_id) {
+        router.push(`/campaigns/${r.campaign_id}`);
         return;
       }
-      const { id } = await createCampaign({
-        topic: topic.trim(),
-        audience_goal: goal.toUpperCase(),
-        platforms,
-      });
-      router.push(`/campaigns/${id}`);
+      setErr("학습 작업을 시작했습니다. AI 학습실에서 진행 상황을 확인하세요.");
+      setBusy(false);
     } catch (e) {
       setErr(String(e));
       setBusy(false);

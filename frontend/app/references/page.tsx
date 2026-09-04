@@ -26,15 +26,21 @@ export default function ReferenceLibraryPage() {
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold">자료실</h1>
+      <div className="flex flex-wrap items-start gap-3">
+        <div>
+          <h1 className="text-2xl font-bold">학습 자료 보기</h1>
+          <p className="mt-1 text-sm text-ink-subtle">AI가 읽었거나 보관 중인 자료를 확인하는 화면입니다.</p>
+        </div>
+        <a href="/learn-studio" className="btn btn-primary ml-auto">새 자료 학습시키기</a>
+      </div>
       {err && <p className="text-sm text-brand-secure">{err}</p>}
       <div className="overflow-x-auto rounded-lg border border-hairline bg-surface-1">
         <table className="w-full text-sm">
           <thead className="bg-surface-2 text-left text-xs text-ink-subtle">
             <tr>
-              <th className="p-2">Title / URL</th><th className="p-2">유형</th>
+              <th className="p-2">자료 제목 / 주소</th><th className="p-2">유형</th>
               <th className="p-2">목적</th><th className="p-2">상태</th>
-              <th className="p-2">품질</th><th className="p-2">권리</th><th className="p-2">Inj</th>
+              <th className="p-2">학습 품질</th><th className="p-2">사용 권리</th><th className="p-2">안전 검사</th>
             </tr>
           </thead>
           <tbody>
