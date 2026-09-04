@@ -45,7 +45,7 @@ def _domain(url: str) -> str:
 
 
 def add_urls(db: Session, *, urls: list[str], execution_mode: str = "LEARN_ONLY",
-             scope: str = "THIS_CAMPAIGN", workspace_id: str | None = None,
+             scope: str = "WORKSPACE", workspace_id: str | None = None,
              brand_id: str | None = None, channel_id: str | None = None,
              campaign_id: str | None = None, collection_id: str | None = None,
              purpose: str = "AUTO", topic: str = "",

@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import uuid
-
 import pytest
 
 from app.db.base import session_scope
@@ -42,6 +40,30 @@ def test_paused_brand_routes_to_no_channel(workspace_a):
     with session_scope() as db:
         d = RT.route(db, workspace_id=workspace_a["workspace_id"], topic="AI 직업 전망")
         assert d.routed_channel_id is None   # paused brand has no eligible channels
+
+
+def test_channel_concept_api_round_trip(client, workspace_a):
+    headers = workspace_a["owner"].headers()
+    channel_id = workspace_a["channel1_id"]
+    strategy = {
+        "concept": "한국어 AI 교육",
+        "topics": ["AI 도구", "업무 자동화", "AI 도구"],
+        "blocked_topics": ["도박"],
+        "strict_topic_match": True,
+    }
+    saved = client.patch(
+        f"/api/channels/{channel_id}",
+        json={"target_audience": "AI 초보 직장인", "content_strategy": strategy},
+        headers=headers,
+    )
+    assert saved.status_code == 200
+    rows = client.get(
+        f"/api/channels?workspace_id={workspace_a['workspace_id']}", headers=headers,
+    ).json()
+    channel = next(row for row in rows if row["id"] == channel_id)
+    assert channel["target_audience"] == "AI 초보 직장인"
+    assert channel["content_strategy"]["topics"] == ["AI 도구", "업무 자동화"]
+    assert channel["content_strategy"]["strict_topic_match"] is True
 
 
 def test_multi_channel_mock_e2e(workspace_a):

@@ -59,11 +59,13 @@ def add_references(payload: dict = Body(...), db: Session = Depends(get_db)):
     urls = payload.get("urls") or ([payload["url"]] if payload.get("url") else [])
     if not urls:
         raise HTTPException(400, "urls required")
+    execution_mode = payload.get("execution_mode", "REFERENCE_ONLY")
+    scope = "WORKSPACE" if execution_mode == "LEARN_ONLY" else payload.get("scope", "WORKSPACE")
     try:
         job = add_urls(
             db, urls=urls,
-            execution_mode=payload.get("execution_mode", "REFERENCE_ONLY"),
-            scope=payload.get("scope", "THIS_CAMPAIGN"),
+            execution_mode=execution_mode,
+            scope=scope,
             workspace_id=payload.get("workspace_id"), brand_id=payload.get("brand_id"),
             channel_id=payload.get("channel_id"), campaign_id=payload.get("campaign_id"),
             collection_id=payload.get("collection_id"),
@@ -416,7 +418,7 @@ def compose_campaign(payload: dict = Body(...), db: Session = Depends(get_db)):
     if urls and mode.value != "CREATE_ONLY":
         try:
             job = add_urls(db, urls=urls, execution_mode=mode.value,
-                           scope=payload.get("scope", "THIS_CAMPAIGN"),
+                           scope="WORKSPACE",
                            workspace_id=ws, brand_id=br, channel_id=ch,
                            campaign_id=campaign_id, purpose=payload.get("purpose", "AUTO"),
                            topic=topic, video_profiles=payload.get("video_profiles"))

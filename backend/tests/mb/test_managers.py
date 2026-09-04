@@ -3,8 +3,6 @@ from __future__ import annotations
 import uuid
 from datetime import datetime, timedelta, timezone
 
-import pytest
-
 from app.db.base import session_scope
 from app.db.models import Campaign, CostLog, PerformanceScore, PlatformContent, RevenueEntry
 from app.db.models_mb import Channel
@@ -136,6 +134,38 @@ def test_routing_picks_a_channel_for_ok_topic(workspace_a):
     with session_scope() as db:
         d = RT.route(db, workspace_id=workspace_a["workspace_id"], topic="AI로 바뀌는 직업 전망")
         assert d.routed_channel_id in (workspace_a["channel1_id"], workspace_a["channel2_id"])
+
+
+def test_strict_channel_topics_route_once_per_matching_platform(workspace_a):
+    with session_scope() as db:
+        for channel_id in (workspace_a["channel1_id"], workspace_a["channel2_id"]):
+            db.get(Channel, channel_id).content_strategy = {
+                "concept": "직장인을 위한 AI 자동화",
+                "topics": ["AI 도구", "업무 자동화"],
+                "blocked_topics": [],
+                "strict_topic_match": True,
+            }
+    with session_scope() as db:
+        d = RT.route(db, workspace_id=workspace_a["workspace_id"], topic="직장인을 위한 AI 도구 사용법")
+        routed = d.decision["routed_channels"]
+        assert routed["youtube_shorts"] == workspace_a["channel1_id"]
+        assert routed["tiktok"] == workspace_a["channel2_id"]
+
+
+def test_strict_channel_topics_block_unrelated_upload(workspace_a):
+    with session_scope() as db:
+        for channel_id in (workspace_a["channel1_id"], workspace_a["channel2_id"]):
+            db.get(Channel, channel_id).content_strategy = {
+                "concept": "AI 자동화 전문 채널",
+                "topics": ["AI 도구"],
+                "blocked_topics": ["도박"],
+                "strict_topic_match": True,
+            }
+    with session_scope() as db:
+        d = RT.route(db, workspace_id=workspace_a["workspace_id"], topic="제주도 감귤 농장 여행기")
+        assert d.routed_channel_id is None
+        assert d.decision["routed_channels"] == {}
+        assert all(score["eligible"] is False for score in d.scores.values())
 
 
 def test_cannibalization_detected_for_near_identical_topics(workspace_a):

@@ -577,6 +577,12 @@ const jput = (path: string, body: unknown) =>
     headers: { "content-type": "application/json", ...authHeaders() },
     body: JSON.stringify(body ?? {}),
   }).then(j);
+const jpatch = (path: string, body: unknown) =>
+  fetch(`${API_BASE}${path}`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json", ...authHeaders() },
+    body: JSON.stringify(body ?? {}),
+  }).then(j);
 const jdelete = (path: string) =>
   fetch(`${API_BASE}${path}`, { method: "DELETE", headers: authHeaders() }).then(j);
 
@@ -621,6 +627,10 @@ export type BrandRow = { id: string; workspace_id: string; name: string; slug: s
 export type ChannelRow = {
   id: string; workspace_id: string; brand_id: string; name: string; platform: string;
   channel_type: string; lifecycle: string; status: string; autopilot_mode: string; daily_budget_usd: number;
+  target_audience?: string;
+  content_strategy?: {
+    concept?: string; topics?: string[]; blocked_topics?: string[]; strict_topic_match?: boolean;
+  };
 };
 export type PortfolioView = {
   workspace_id: string; objective: string;
@@ -638,7 +648,9 @@ export const createBrand = (workspaceId: string, name: string): Promise<{ id: st
 /** AUDIT-P8-004 — persist the setup wizard to the server: create the workspace
  *  and first brand via the existing tenant endpoints. Idempotent-ish: reuses a
  *  workspace whose name already matches. */
-export async function finishSetup(input: { workspace: string; brand: string }): Promise<{
+export async function finishSetup(input: {
+  workspace: string; brand: string; sns: string[]; concept: string; topics: string[];
+}): Promise<{
   workspace_id: string | null; brand_id: string | null; created: string[];
 }> {
   const created: string[] = [];
@@ -668,12 +680,46 @@ export async function finishSetup(input: { workspace: string; brand: string }): 
       created.push("brand");
     }
   }
+  if (brand_id) {
+    const existingChannels = await listChannels(`?brand_id=${brand_id}`).catch(() => [] as ChannelRow[]);
+    const channelTypes: Record<string, string> = {
+      youtube_shorts: "YOUTUBE_SHORTS", tiktok: "TIKTOK", instagram_reel: "INSTAGRAM_REEL",
+      x: "X", threads: "THREADS", linkedin: "LINKEDIN", naver_blog: "NAVER_BLOG",
+    };
+    for (const platform of input.sns) {
+      const contentStrategy = {
+        concept: input.concept,
+        topics: input.topics,
+        blocked_topics: [],
+        strict_topic_match: true,
+      };
+      const existing = existingChannels.find((channel) => channel.platform === platform);
+      if (existing) {
+        await updateChannel(existing.id, { content_strategy: contentStrategy });
+        continue;
+      }
+      await createChannel({
+        brand_id,
+        name: `${brName} · ${platform}`,
+        platform,
+        channel_type: channelTypes[platform] ?? platform.toUpperCase(),
+        content_strategy: contentStrategy,
+      });
+      created.push(`channel:${platform}`);
+    }
+  }
   return { workspace_id, brand_id, created };
 }
 export const listBrands = (workspaceId?: string): Promise<BrandRow[]> =>
   jget(`/api/brands${workspaceId ? `?workspace_id=${workspaceId}` : ""}`);
 export const listChannels = (params: string = ""): Promise<ChannelRow[]> =>
   jget(`/api/channels${params}`);
+export const createChannel = (input: {
+  brand_id: string; name: string; platform: string; channel_type?: string;
+  content_strategy?: Record<string, unknown>;
+}): Promise<{ id: string; lifecycle: string }> => jpost("/api/channels", input);
+export const updateChannel = (id: string, patch: Record<string, unknown>): Promise<Record<string, unknown>> =>
+  jpatch(`/api/channels/${id}`, patch);
 export const getChannelHealth = (id: string): Promise<Record<string, unknown>> =>
   jget(`/api/channels/${id}/health`);
 export const getChannelPlan = (id: string): Promise<Record<string, unknown>> =>

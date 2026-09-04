@@ -25,9 +25,30 @@ def _topic_fit(topic: str, channel: Channel, pillars: list[ContentPillar]) -> fl
         for kw in (p.keywords or [p.name]):
             best = max(best, cosine(tv, embed(kw)))
     strat_topics = (channel.content_strategy or {}).get("topics", [])
-    for kw in strat_topics:
+    concept = (channel.content_strategy or {}).get("concept", "")
+    for kw in [*strat_topics, concept]:
+        if not kw:
+            continue
         best = max(best, cosine(tv, embed(kw)))
     return round(best, 3)
+
+
+def topic_allowed(topic: str, channel: Channel) -> tuple[bool, str]:
+    """Hard channel-topic gate. Legacy channels remain open until strict mode is saved."""
+    strategy = channel.content_strategy or {}
+    text = topic.casefold().strip()
+    blocked = [str(x).casefold().strip() for x in strategy.get("blocked_topics", []) if str(x).strip()]
+    if any(term in text for term in blocked):
+        return False, "blocked_topic"
+    if not strategy.get("strict_topic_match", False):
+        return True, "open_policy"
+    allowed = [str(x).casefold().strip() for x in strategy.get("topics", []) if str(x).strip()]
+    if not allowed:
+        return False, "topics_not_configured"
+    if any(term in text or text in term for term in allowed):
+        return True, "keyword_match"
+    similarity = max((cosine(embed(topic), embed(term)) for term in allowed), default=0.0)
+    return (True, "semantic_match") if similarity >= 0.55 else (False, "topic_mismatch")
 
 
 def _brand_fit(topic: str, brand: Brand) -> float:
@@ -68,6 +89,7 @@ def route(db: Session, *, workspace_id: str, topic: str, angle: str = "",
         pillars = db.query(ContentPillar).filter_by(brand_id=ch.brand_id, status="ACTIVE").all()
         snap_score = _latest_health(db, ch.id)
         bf = _brand_fit(topic, brand)
+        allowed, policy_reason = topic_allowed(topic, ch)
         dims = {
             "audience_fit": 0.6,                       # no audience vectors yet
             "topic_fit": _topic_fit(topic, ch, pillars),
@@ -81,13 +103,19 @@ def route(db: Session, *, workspace_id: str, topic: str, angle: str = "",
             "risk": 1.0 if bf > 0 else 0.0,
         }
         total = sum(_ROUTING_WEIGHTS[k] * dims[k] for k in _ROUTING_WEIGHTS)
-        if bf == 0.0:
+        if bf == 0.0 or not allowed:
             total = 0.0                                # brand policy block
         scores[ch.id] = {"total": round(total, 4), "dims": {k: round(v, 3) for k, v in dims.items()},
-                         "brand_id": ch.brand_id, "platform": ch.platform}
+                         "brand_id": ch.brand_id, "platform": ch.platform,
+                         "eligible": allowed and bf > 0.0, "policy_reason": policy_reason}
 
-    ranked = sorted(scores.items(), key=lambda kv: kv[1]["total"], reverse=True)
+    ranked = sorted(((cid, score) for cid, score in scores.items() if score["eligible"]),
+                    key=lambda kv: kv[1]["total"], reverse=True)
     routed = ranked[0] if ranked and ranked[0][1]["total"] > 0 else None
+    routed_channels: dict[str, str] = {}
+    for channel_id, score in ranked:
+        if score["total"] > 0:
+            routed_channels.setdefault(score["platform"], channel_id)
     cannib = cannibalization_status(db, workspace_id, topic, angle,
                                     exclude_channel=routed[0] if routed else None)
     row = ContentRoutingDecision(
@@ -97,6 +125,7 @@ def route(db: Session, *, workspace_id: str, topic: str, angle: str = "",
         scores=scores, cannibalization=cannib["status"],
         decision={"ranked": [cid for cid, _ in ranked[:5]],
                   "reason": "top routing score" if routed else "no eligible channel (brand policy / no fit)",
+                  "routed_channels": routed_channels,
                   "cannibalization": cannib},
     )
     db.add(row)

@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from fastapi import APIRouter, Body, Depends, HTTPException
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from app.auth.context import AuthContext
@@ -28,6 +28,25 @@ router = APIRouter(prefix="/api", tags=["multibrand"])
 
 def _slug(s: str) -> str:
     return re.sub(r"[^a-z0-9-]+", "-", s.lower().strip()).strip("-")[:60] or "x"
+
+
+def _text_list(value, *, limit: int = 30) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return list(dict.fromkeys(
+        str(item).strip()[:120] for item in value if str(item).strip()
+    ))[:limit]
+
+
+def _content_strategy(value: dict | None, current: dict | None = None) -> dict:
+    raw = value if isinstance(value, dict) else {}
+    return {
+        **(current or {}),
+        "concept": str(raw.get("concept") or "").strip()[:500],
+        "topics": _text_list(raw.get("topics")),
+        "blocked_topics": _text_list(raw.get("blocked_topics")),
+        "strict_topic_match": bool(raw.get("strict_topic_match", False)),
+    }
 
 
 # ---- workspaces ------------------------------------------------------- #
@@ -166,6 +185,7 @@ class NewChannel(BaseModel):
     daily_budget_usd: float = 0.0
     daily_max_posts: int = 2
     platform_account_id: str | None = None
+    content_strategy: dict = Field(default_factory=dict)
 
 
 @router.get("/channels")
@@ -177,7 +197,9 @@ def list_channels(workspace_id: str | None = None, brand_id: str | None = None,
     return [{"id": c.id, "workspace_id": c.workspace_id, "brand_id": c.brand_id,
              "name": c.name, "platform": c.platform, "channel_type": c.channel_type,
              "lifecycle": c.lifecycle, "status": c.status,
-             "autopilot_mode": c.autopilot_mode, "daily_budget_usd": c.daily_budget_usd}
+             "autopilot_mode": c.autopilot_mode, "daily_budget_usd": c.daily_budget_usd,
+             "target_audience": c.target_audience,
+             "content_strategy": _content_strategy(c.content_strategy)}
             for c in q.order_by(Channel.created_at).all()]
 
 
@@ -192,6 +214,7 @@ def create_channel(body: NewChannel, db: Session = Depends(get_db),
                 platform=body.platform, channel_type=body.channel_type,
                 primary_objective=body.primary_objective, daily_budget_usd=body.daily_budget_usd,
                 daily_max_posts=body.daily_max_posts, platform_account_id=body.platform_account_id,
+                content_strategy=_content_strategy(body.content_strategy),
                 lifecycle="WARMUP")
     db.add(c)
     db.flush()
@@ -209,7 +232,9 @@ def update_channel(channel_id: str, patch: dict = Body(...), db: Session = Depen
               "monthly_budget_usd", "lifecycle", "status", "schedule", "brand_safety", "meta"):
         if k in patch:
             ctx.require("channel.write")
-            setattr(c, k, patch[k])
+            value = (_content_strategy(patch[k], c.content_strategy)
+                     if k == "content_strategy" else patch[k])
+            setattr(c, k, value)
     if "autopilot_mode" in patch:
         ctx.require("autopilot.write")
         c.autopilot_mode = patch["autopilot_mode"]
@@ -318,4 +343,5 @@ def route_topic(workspace_id: str = Body(..., embed=True), topic: str = Body(...
     get_workspace(db, ctx, workspace_id)
     d = _routing.route(db, workspace_id=workspace_id, topic=topic, angle=angle)
     return {"routed_channel_id": d.routed_channel_id, "routed_brand_id": d.routed_brand_id,
+            "routed_channels": d.decision.get("routed_channels", {}),
             "cannibalization": d.cannibalization, "scores": d.scores, "decision": d.decision}
