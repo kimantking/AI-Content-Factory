@@ -125,13 +125,20 @@ def _record_asset(session, *, cid, content_id, scene_id, asset_type, provider, m
 # nodes
 # --------------------------------------------------------------------------- #
 
+def _phase1_ready(camp: Campaign) -> bool:
+    """Accept the atomic text-to-media hand-off as well as manual starts."""
+    return camp.status == "SUCCESS" or (
+        camp.status == "RUNNING" and camp.current_step == "media:queued"
+    )
+
+
 def load_inputs_node(state: MediaState) -> dict:
     cid = state["campaign_id"]
     with session_scope() as session:
         camp = session.get(Campaign, cid)
         if camp is None:
             raise ValueError(f"campaign {cid} not found")
-        if camp.status != "SUCCESS":
+        if not _phase1_ready(camp):
             raise ProviderError(
                 f"Phase 1-A not complete for campaign {cid} (status={camp.status})",
                 error_type="INSUFFICIENT_RESEARCH",

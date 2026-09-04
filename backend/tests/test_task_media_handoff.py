@@ -49,3 +49,13 @@ def test_learning_mode_never_starts_media(monkeypatch):
     )
 
     assert _enqueue_media_after_text(campaign_id, None) is False
+
+
+def test_media_loader_accepts_automatic_queue_handoff():
+    from app.agents.media_nodes import _phase1_ready
+
+    queued = Campaign(status="RUNNING", current_step="media:queued")
+    incomplete = Campaign(status="RUNNING", current_step="qa_script")
+
+    assert _phase1_ready(queued) is True
+    assert _phase1_ready(incomplete) is False
