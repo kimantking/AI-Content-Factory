@@ -5,6 +5,7 @@ import {
   MemoryRow,
   getLearningDashboard,
   getRecipes,
+  learningDashboard as getReferenceLearningDashboard,
   memoryAction,
   runLearning,
 } from "@/lib/api";
@@ -47,19 +48,27 @@ function MemCard({ m, onAct }: { m: MemoryRow; onAct: (id: string, a: string) =>
 }
 
 export default function LearningPage() {
+  const [wsId, setWsId] = useState("");
   const [dash, setDash] = useState<Awaited<ReturnType<typeof getLearningDashboard>> | null>(null);
+  const [referenceLearning, setReferenceLearning] = useState<Awaited<ReturnType<typeof getReferenceLearningDashboard>> | null>(null);
   const [recipes, setRecipes] = useState<Record<string, unknown>[]>([]);
   const [err, setErr] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const [d, r] = await Promise.all([getLearningDashboard(), getRecipes()]);
+      const [d, r, learned] = await Promise.all([
+        getLearningDashboard(), getRecipes(), getReferenceLearningDashboard(wsId || undefined),
+      ]);
       setDash(d);
       setRecipes(r);
+      setReferenceLearning(learned);
     } catch (e) {
       setErr(String(e));
     }
+  }, [wsId]);
+  useEffect(() => {
+    setWsId(window.localStorage?.getItem("acf_workspace_id") ?? "");
   }, []);
   useEffect(() => {
     load();
@@ -92,19 +101,61 @@ export default function LearningPage() {
         <a href="/learn-studio" className="btn btn-primary ml-auto">새 자료 학습시키기</a>
       </div>
 
+      <section className="rounded-lg border border-hairline bg-surface-1 p-5">
+        <div className="flex flex-wrap items-center gap-3">
+          <div>
+            <h2 className="text-sm font-bold">자료 학습 상태</h2>
+            <p className="mt-1 text-xs text-ink-subtle">URL로 넣은 자료를 읽고 분석한 결과입니다.</p>
+          </div>
+          <a href="/references" className="btn btn-secondary ml-auto">읽은 자료 확인</a>
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+          {[
+            ["등록 자료", referenceLearning?.total_references ?? 0],
+            ["학습 완료", referenceLearning?.ready_references ?? 0],
+            ["학습 데이터", referenceLearning?.dataset_records ?? 0],
+            ["제작 규칙", referenceLearning?.prompt_blueprints ?? 0],
+            ["에이전트 스킬", referenceLearning?.learned_skills ?? 0],
+            ["콘텐츠 레시피", referenceLearning?.creative_recipes ?? 0],
+          ].map(([label, value]) => (
+            <div key={String(label)} className="rounded bg-surface-2 p-3 text-center">
+              <p className="text-xs text-ink-subtle">{label}</p>
+              <p className="mt-1 text-lg font-bold">{value}개</p>
+            </div>
+          ))}
+        </div>
+        {(referenceLearning?.total_references ?? 0) === 0 ? (
+          <p className="mt-3 rounded bg-surface-2 p-3 text-xs text-ink-subtle">
+            아직 학습시킨 자료가 없습니다. `새 자료 학습시키기`에서 URL을 넣고 학습 시작을 눌러 주세요.
+          </p>
+        ) : (
+          <p className="mt-3 text-xs text-ink-subtle">
+            최근 자료 학습: {referenceLearning?.last_learning_run
+              ? new Date(referenceLearning.last_learning_run).toLocaleString("ko-KR") : "기록 없음"}
+          </p>
+        )}
+      </section>
+
+      <section className="rounded-lg border border-hairline bg-surface-1 p-5">
+        <h2 className="text-sm font-bold">게시 성과 학습</h2>
+        <p className="mt-1 text-xs text-ink-subtle">
+          SNS에 게시한 콘텐츠의 조회수·수익 데이터를 분석합니다. 아직 게시한 콘텐츠가 없으면 아래 항목이 0으로 보이는 것이 정상입니다.
+        </p>
       <button
         type="button"
         onClick={onRun}
         disabled={busy}
-        className="rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary disabled:opacity-50"
+        className="mt-3 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary disabled:opacity-50"
       >
-        새 학습 결과 정리하기
+        게시 성과 다시 분석하기
       </button>
       {dash.last_run && (
         <p className="text-xs text-subtle">
-          최근 정리 {dash.last_run.run_date} · {JSON.stringify(dash.last_run.summary)}
+          최근 분석 {dash.last_run.run_date} · 기록 {String(dash.last_run.summary.records ?? 0)}개 ·
+          패턴 {String(dash.last_run.summary.patterns ?? 0)}개 · 완료한 실험 {String(dash.last_run.summary.experiments_completed ?? 0)}개
         </p>
       )}
+      </section>
 
       <section className="rounded-lg border border-hairline bg-surface-1 p-5">
         <h2 className="mb-2 text-sm font-bold">강함 ({dash.strong.length})</h2>
