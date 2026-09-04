@@ -208,7 +208,7 @@ class VideoQualityScoreV2:
 
 @dataclass
 class VideoCreativePlan:
-    """The VideoDirector's output — a full creative brief for one render."""
+    """A full creative brief produced for one render."""
     platform: str
     content_type: str
     profile: str = "STANDARD"                 # FAST | STANDARD | PREMIUM | CINEMATIC

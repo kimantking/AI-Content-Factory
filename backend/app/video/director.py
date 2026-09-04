@@ -167,15 +167,3 @@ def _caption_style_for(style: str, is_short: bool) -> str:
     return {"NEWS": "TICKER", "DATA_DRIVEN": "PUNCH", "ENTERTAINMENT": "BOLD"}.get(
         style.upper(), "CLEAN")
 
-
-class VideoDirector:
-    """Thin OO wrapper so callers can hold a configured director."""
-
-    def __init__(self, *, brand: str = "default", gpu_available: bool = False):
-        self.brand = brand
-        self.gpu_available = gpu_available
-
-    def direct(self, **kw) -> VideoCreativePlan:
-        kw.setdefault("brand", self.brand)
-        kw.setdefault("gpu_available", self.gpu_available)
-        return direct_video(**kw)

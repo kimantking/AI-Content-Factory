@@ -15,9 +15,9 @@ Design + OSS comparison: docs/VIDEO_ARCHITECTURE.md, docs/VIDEO_BEST_SKILL_MATRI
 """
 from __future__ import annotations
 
-from app.video.director import VideoDirector, direct_video
+from app.video.director import direct_video
 from app.video.registry import VIDEO_SKILLS, VideoSkill
-from app.video.router import QualityProfile, VideoSkillRouter, route_video_skills
+from app.video.router import QualityProfile
 from app.video.schema import (
     AudioPlan,
     SceneDirection,
@@ -31,7 +31,6 @@ from app.video.schema import (
 from app.video import captions, creative_qa, cuts, rerender, technical_qa  # noqa: F401
 
 __all__ = [
-    "VideoDirector",
     "direct_video",
     "VideoCreativePlan",
     "SceneDirection",
@@ -39,8 +38,6 @@ __all__ = [
     "AudioPlan",
     "VoicePerformancePlan",
     "VideoQualityScoreV2",
-    "VideoSkillRouter",
-    "route_video_skills",
     "QualityProfile",
     "VIDEO_SKILLS",
     "VideoSkill",
