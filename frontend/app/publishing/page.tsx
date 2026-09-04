@@ -101,7 +101,7 @@ export default function PublishingAccounts() {
                     onClick={() => onConnect(c.platform)}
                     className="rounded border border-hairline px-3 py-1 text-xs disabled:opacity-40"
                   >
-                    Connect
+                    계정 연결하기
                   </button>
                 ) : (
                   <>
@@ -111,7 +111,7 @@ export default function PublishingAccounts() {
                       onClick={() => onConnect(c.platform)}
                       className="rounded border border-hairline px-3 py-1 text-xs"
                     >
-                      Reconnect
+                      다시 연결하기
                     </button>
                     <button
                       type="button"
@@ -122,12 +122,12 @@ export default function PublishingAccounts() {
                       }}
                       className="rounded border border-hairline px-3 py-1 text-xs"
                     >
-                      Disconnect
+                      연결 해제
                     </button>
                   </>
                 )}
                 <span className="text-[11px] text-ink-tertiary self-center">
-                  verified {c.last_verified_at}
+                  최근 확인 {c.last_verified_at}
                 </span>
               </div>
             </section>

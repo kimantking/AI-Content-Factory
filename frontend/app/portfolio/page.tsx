@@ -31,6 +31,22 @@ function Card({ title, right, children }: { title: string; right?: React.ReactNo
 const num = (v: unknown) => (typeof v === "number" ? Math.round(v * 10) / 10 : "—");
 const joinTopics = (value?: string[]) => (value ?? []).join(", ");
 const splitTopics = (value: string) => value.split(",").map((item) => item.trim()).filter(Boolean);
+const OBJECTIVES = [
+  { id: "GROWTH", label: "성장 우선" },
+  { id: "REVENUE", label: "매출 우선" },
+  { id: "PROFIT", label: "순이익 우선" },
+  { id: "BALANCED", label: "균형 배분" },
+] as const;
+const OBJECTIVE_KO: Record<string, string> = Object.fromEntries(OBJECTIVES.map((item) => [item.id, item.label]));
+const STATUS_KO: Record<string, string> = {
+  ACTIVE: "운영 중", PAUSED: "일시 정지", WARMUP: "준비 중", SCALE: "확대 추천",
+  SCALE_CAUTIOUSLY: "조심스럽게 확대", HOLD: "유지", REVIEW: "검토 필요",
+  TEST_MORE: "추가 테스트", NOT_ENOUGH_DATA: "데이터 부족",
+};
+const ACTION_KO: Record<string, string> = {
+  KEEP: "현재 운영 유지", EXPERIMENT: "새 형식 테스트", REDUCE_PRODUCTION: "제작량 줄이기",
+  REPOSITION_RECOMMENDED: "채널 방향 재설정 권장",
+};
 
 export default function PortfolioPage() {
   const [apiKey, setApiKey] = useState("");
@@ -152,18 +168,23 @@ export default function PortfolioPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-baseline gap-3">
-        <h1 className="text-lg font-bold">채널 · 포트폴리오</h1>
-        <button className="ml-auto rounded-lg border px-3 py-1 text-xs" onClick={load}>
-          refresh
+      <div className="flex flex-wrap items-start gap-3">
+        <div>
+          <h1 className="text-lg font-bold">SNS 채널 관리</h1>
+          <p className="mt-1 text-xs text-ink-subtle">채널별 주제와 운영 방향을 정하고 예산 배분을 확인합니다.</p>
+        </div>
+        <button className="btn btn-secondary ml-auto" onClick={load}>
+          새로고침
         </button>
       </div>
       {err && <p className="rounded-lg bg-surface-2 p-3 text-xs text-brand-secure">{err}</p>}
 
-      <Card title="연결 상태">
-        <div className="flex flex-wrap items-end gap-3 text-xs">
+      <details className="rounded-lg border border-hairline bg-surface-1 p-5">
+        <summary className="cursor-pointer text-sm font-bold">작업공간 연결 설정 (필요할 때만 열기)</summary>
+        <p className="mt-2 text-xs text-ink-subtle">처음 설정한 작업공간이 보이지 않을 때만 아래 내용을 확인하세요.</p>
+        <div className="mt-3 flex flex-wrap items-end gap-3 text-xs">
           <label className="flex flex-col gap-1">
-            <span className="text-ink-subtle">API key (X-Api-Key)</span>
+            <span className="text-ink-subtle">API 연결 키</span>
             <input
               className="w-72 rounded border px-2 py-1 font-mono"
               value={apiKey}
@@ -174,7 +195,7 @@ export default function PortfolioPage() {
           <label className="flex flex-col gap-1">
             <span className="text-ink-subtle">작업공간</span>
             <select className="input !w-auto !py-1" value={wsId} onChange={(e) => setWsId(e.target.value)}>
-              <option value="">(pick)</option>
+              <option value="">작업공간을 선택하세요</option>
               {workspaces.map((w) => (
                 <option key={w.id} value={w.id}>
                   {w.name} — {w.role ?? "?"}
@@ -182,21 +203,19 @@ export default function PortfolioPage() {
               ))}
             </select>
           </label>
-          <button className="rounded-lg bg-primary px-3 py-1.5 text-on-primary" onClick={saveCreds}>
-            save + load
+          <button className="btn btn-primary" onClick={saveCreds}>
+            선택한 작업공간 불러오기
           </button>
-          <span className="text-ink-tertiary">
-            stored per-browser; auth is only enforced by the API in production
-          </span>
+          <span className="basis-full text-ink-tertiary">이 설정은 현재 브라우저에만 안전하게 저장됩니다.</span>
         </div>
-      </Card>
+      </details>
 
       <div className="grid gap-4 md:grid-cols-4">
         {([
-          ["Channels", totals["channels"]],
-          ["Active", totals["active"]],
-          ["Σ daily budget $", totals["sum_daily_budget_usd"]],
-          ["Avg health", totals["avg_health"]],
+          ["전체 채널", totals["channels"]],
+          ["운영 중인 채널", totals["active"]],
+          ["하루 예산 합계 ($)", totals["sum_daily_budget_usd"]],
+          ["평균 채널 상태", totals["avg_health"]],
         ] as [string, unknown][]).map(([k, v]) => (
           <div key={k} className="rounded-lg border border-hairline bg-surface-1 p-4 text-center">
             <div className="text-xs text-ink-subtle">{k}</div>
@@ -205,11 +224,11 @@ export default function PortfolioPage() {
         ))}
       </div>
 
-      <Card title={`Brands (${brands.length})`}>
+      <Card title={`브랜드 (${brands.length}개)`}>
         <div className="flex flex-wrap gap-2 text-xs">
           {brands.map((b) => (
             <span key={b.id} className="rounded-full border px-3 py-1">
-              {b.name} · {b.status} · {b.channels} ch
+              {b.name} · {STATUS_KO[b.status] ?? b.status} · 채널 {b.channels}개
             </span>
           ))}
           {brands.length === 0 && <span className="text-ink-tertiary">브랜드 없음</span>}
@@ -217,12 +236,13 @@ export default function PortfolioPage() {
       </Card>
 
       <Card
-        title={`Channel portfolio · objective ${pf?.objective ?? "—"}`}
+        title={`채널 운영 현황 · 현재 기준: ${OBJECTIVE_KO[pf?.objective ?? ""] ?? "미설정"}`}
         right={
-          <span className="flex gap-1 text-xs">
-            {["GROWTH", "REVENUE", "PROFIT", "BALANCED"].map((o) => (
-              <button key={o} className="rounded border px-2 py-0.5" onClick={() => runAlloc(o)}>
-                allocate {o}
+          <span className="flex flex-wrap justify-end gap-1 text-xs">
+            {OBJECTIVES.map((o) => (
+              <button key={o.id} className="btn btn-secondary !h-8 !px-2.5 !text-xs" onClick={() => runAlloc(o.id)}
+                title={`${o.label} 기준으로 채널별 예산을 계산합니다`}>
+                {o.label} 배분
               </button>
             ))}
           </span>
@@ -234,15 +254,15 @@ export default function PortfolioPage() {
               <tr className="text-left text-ink-tertiary">
                 <th className="py-1 pr-2">채널</th>
                 <th className="py-1 pr-2">플랫폼</th>
-                <th className="py-1 pr-2">상태</th>
-                <th className="py-1 pr-2">상태</th>
-                <th className="py-1 pr-2">포트폴리오</th>
-                <th className="py-1 pr-2">성장률</th>
-                <th className="py-1 pr-2">수익</th>
-                <th className="py-1 pr-2">순이익</th>
-                <th className="py-1 pr-2">규모</th>
-                <th className="py-1 pr-2">alloc $</th>
-                <th className="py-1"></th>
+                <th className="py-1 pr-2">운영 상태</th>
+                <th className="py-1 pr-2">건강 점수</th>
+                <th className="py-1 pr-2">종합 점수</th>
+                <th className="py-1 pr-2">성장 점수</th>
+                <th className="py-1 pr-2">매출 점수</th>
+                <th className="py-1 pr-2">수익 점수</th>
+                <th className="py-1 pr-2">운영 권장</th>
+                <th className="py-1 pr-2">배정 예산 ($)</th>
+                <th className="py-1">관리</th>
               </tr>
             </thead>
             <tbody>
@@ -253,21 +273,21 @@ export default function PortfolioPage() {
                   <tr key={c.id} className="border-b border-hairline last:border-0">
                     <td className="py-1 pr-2 font-medium">{c.name}</td>
                     <td className="py-1 pr-2">{c.platform}</td>
-                    <td className="py-1 pr-2">{c.status}/{c.lifecycle}</td>
+                    <td className="py-1 pr-2">{STATUS_KO[c.status] ?? c.status} / {STATUS_KO[c.lifecycle] ?? c.lifecycle}</td>
                     <td className="py-1 pr-2">{num(s["health_score"])}</td>
                     <td className="py-1 pr-2 font-semibold">{num(s["portfolio_score"])}</td>
                     <td className="py-1 pr-2">{num(s["growth_score"])}</td>
                     <td className="py-1 pr-2">{num(s["revenue_score"])}</td>
                     <td className="py-1 pr-2">{num(s["profit_score"])}</td>
-                    <td className="py-1 pr-2">{String(s["scale_status"] ?? "—")}</td>
+                    <td className="py-1 pr-2">{STATUS_KO[String(s["scale_status"])] ?? String(s["scale_status"] ?? "—")}</td>
                     <td className="py-1 pr-2 tabular-nums">{a != null ? a.toFixed(0) : "—"}</td>
                     <td className="py-1">
                       <div className="flex gap-1 whitespace-nowrap">
                         <button className="rounded border px-2 py-0.5" onClick={() => editStrategy(c)}>
-                          콘셉트 설정
+                          채널 운영 규칙
                         </button>
                         <button className="rounded border px-2 py-0.5" onClick={() => loadMon(c.id)}>
-                          수익 모델
+                          수익 분석
                         </button>
                       </div>
                     </td>
@@ -327,8 +347,8 @@ export default function PortfolioPage() {
         )}
         {alloc && (
           <p className="mt-2 text-xs text-ink-subtle">
-            total ${num(alloc["total_usd"])} · trend reserve ${num(alloc["trend_reserve_usd"])} ·
-            floor ${num(alloc["min_exploration_floor_usd"])} · hard-capped {String(alloc["hard_capped"])}
+            총 배분 예산 ${num(alloc["total_usd"])} · 유행 콘텐츠 예비비 ${num(alloc["trend_reserve_usd"])} ·
+            채널별 최소 실험비 ${num(alloc["min_exploration_floor_usd"])} · 예산 상한 적용 {alloc["hard_capped"] ? "예" : "아니오"}
           </p>
         )}
       </Card>
@@ -342,7 +362,7 @@ export default function PortfolioPage() {
             return (
               <div key={id} className="mb-3 border-b border-hairline pb-2 text-xs last:border-0">
                 <div className="font-semibold">
-                  {ch?.name} → recommended: {String(m["recommended_primary_model"] ?? "…")}
+                  {ch?.name} → 추천 수익 방식: {String(m["recommended_primary_model"] ?? "분석 중")}
                 </div>
                 <div className="flex flex-wrap gap-2 py-1">
                   {Object.entries(fit).map(([k, v]) => (
@@ -352,8 +372,8 @@ export default function PortfolioPage() {
                   ))}
                 </div>
                 <div className="text-ink-subtle">
-                  actual ${num(pc["revenue_actual_usd"])} · est ${num(pc["revenue_estimated_usd"])} (separate) ·
-                  cost ${num(pc["production_cost_usd"])} · net ${num(pc["net_profit_usd"])}
+                  실제 매출 ${num(pc["revenue_actual_usd"])} · 예상 매출 ${num(pc["revenue_estimated_usd"])} ·
+                  제작비 ${num(pc["production_cost_usd"])} · 순이익 ${num(pc["net_profit_usd"])}
                 </div>
               </div>
             );
@@ -361,17 +381,17 @@ export default function PortfolioPage() {
         </Card>
       )}
 
-      <Card title={`Portfolio recommendations (${recs.length}) — advisory, never auto-applied`}>
+      <Card title={`운영 추천 (${recs.length}개) · 확인 전에는 자동 적용되지 않습니다`}>
         <table className="w-full text-xs">
           <tbody>
             {recs.map((r, i) => (
               <tr key={i} className="border-b border-hairline last:border-0">
-                <td className="py-1 pr-2 font-mono">{String(r["action"])}</td>
+                <td className="py-1 pr-2 font-medium">{ACTION_KO[String(r["action"])] ?? String(r["action"])}</td>
                 <td className="py-1 pr-2 text-ink-subtle">
                   {channels.find((c) => c.id === r["channel_id"])?.name ?? String(r["channel_id"] ?? "")}
                 </td>
-                <td className="py-1 pr-2">conf {num(r["confidence"])}</td>
-                <td className="py-1 pr-2">n={String(r["sample_size"])}</td>
+                <td className="py-1 pr-2">신뢰도 {num(r["confidence"])}</td>
+                <td className="py-1 pr-2">분석 자료 {String(r["sample_size"])}개</td>
                 <td className="py-1 text-ink-subtle">{JSON.stringify(r["detail"])}</td>
               </tr>
             ))}

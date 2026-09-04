@@ -66,16 +66,16 @@ export default function StudioPage({ params }: { params: Promise<{ id: string }>
       <div className="flex items-baseline gap-3">
         <h1 className="text-lg font-bold">영상 스튜디오</h1>
         <a href={`/campaigns/${id}/media`} className="text-xs text-primary underline">
-          ← media pipeline
+          ← 영상 제작 과정
         </a>
         <button className="ml-auto rounded-lg border px-3 py-1 text-xs" onClick={load}>
-          refresh
+          새로고침
         </button>
       </div>
       {err && <p className="rounded-lg bg-surface-2 p-3 text-xs text-brand-secure">{err}</p>}
       {!cp && !err && (
         <p className="text-xs text-subtle">
-          No creative plan yet — run the media pipeline for this campaign.
+          아직 영상 제작 계획이 없습니다. 먼저 영상 제작 과정을 실행해 주세요.
         </p>
       )}
 

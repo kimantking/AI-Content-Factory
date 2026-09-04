@@ -196,7 +196,7 @@ export default function SetupWizard() {
         )}
         {s.step === 7 && (
           <div className="text-sm">
-            <div className="font-bold">테스트 실행 (DRY RUN)</div>
+            <div className="font-bold">안전 테스트 실행</div>
             <p className="mt-1 text-xs text-ink-subtle">실제 게시 없이 파이프라인을 한 번 돌려봅니다.</p>
             <label className="mt-2 inline-flex items-center gap-1">
               <input type="checkbox" checked={s.dryRunOk} onChange={(e) => set({ dryRunOk: e.target.checked })} />

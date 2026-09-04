@@ -106,7 +106,7 @@ export default function AdminPage() {
         <h1 className="text-lg font-bold">시스템 운영</h1>
         {st && (
           <span className="text-xs text-subtle">
-            {st.env} · v{st.version} · refreshed every 15s
+            {st.env} · v{st.version} · 15초마다 자동 갱신
           </span>
         )}
         <button
@@ -114,7 +114,7 @@ export default function AdminPage() {
           disabled={busy}
           onClick={load}
         >
-          Refresh now
+          지금 새로고침
         </button>
       </div>
 

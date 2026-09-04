@@ -173,14 +173,14 @@ export default function AutopilotPage() {
                   onClick={() => act(() => rejectCandidate(c.id, "ONCE", "Not Interested"))}
                   className="rounded border border-hairline px-2 py-0.5 text-xs"
                 >
-                  Reject
+                  이번에는 제외
                 </button>
                 <button
                   type="button"
                   onClick={() => act(() => rejectCandidate(c.id, "PERMANENT", "Brand Mismatch"))}
                   className="rounded border border-hairline px-2 py-0.5 text-xs"
                 >
-                  Block
+                  이 주제 계속 제외
                 </button>
               </div>
             </div>

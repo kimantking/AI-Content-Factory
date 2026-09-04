@@ -26,8 +26,17 @@ const BADGE: Record<string, string> = {
   NOT_SUPPORTED: "bg-surface-3 text-ink-subtle",
   DRAFT: "bg-surface-2 text-ink-subtle",
 };
+const STATUS_KO: Record<string, string> = {
+  PUBLISHED: "게시 완료", READY: "게시 준비", SCHEDULED: "예약됨", QUEUED: "대기 중",
+  PROCESSING: "처리 중", VERIFYING: "확인 중", RETRY: "재시도 대기", FAILED: "실패",
+  BLOCKED: "차단됨", REAUTH_REQUIRED: "다시 로그인 필요", WAITING_APPROVAL: "승인 대기",
+  WAITING_USER_ACTION: "사용자 확인 필요", WAITING_PLATFORM_ACTION: "SNS 처리 대기",
+  NOT_SUPPORTED: "자동 게시 미지원", DRAFT: "초안",
+};
 const Badge = ({ s }: { s: string }) => (
-  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${BADGE[s] ?? BADGE.DRAFT}`}>{s}</span>
+  <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${BADGE[s] ?? BADGE.DRAFT}`}>
+    {STATUS_KO[s] ?? s}
+  </span>
 );
 
 export default function PublishPage({ params }: { params: Promise<{ id: string }> }) {
@@ -82,21 +91,21 @@ export default function PublishPage({ params }: { params: Promise<{ id: string }
     <main className="space-y-6">
       <div className="flex items-center justify-between">
         <a href={`/campaigns/${id}/media`} className="text-sm text-primary underline">
-          ← 미디어
+          ← 영상 확인
         </a>
         <a href="/publishing" className="text-sm text-primary underline">
-          Platform Accounts →
+          SNS 계정 연결 →
         </a>
       </div>
 
       <div className="rounded-md border border-hairline bg-surface-1 p-4">
-        <p className="text-sm font-semibold">READY TO PUBLISH</p>
+        <p className="text-sm font-semibold">게시 준비</p>
         <p className="mt-1 text-xs text-subtle">
-          rollup: <b>{rollup || "-"}</b> · mode: {mode} ·{" "}
+          전체 상태: <b>{STATUS_KO[rollup] ?? (rollup || "-")}</b> · 게시 방식: {mode === "MANUAL" ? "직접 확인" : mode} ·{" "}
           {dryRun ? (
-            <span className="font-bold text-brand-secure">DRY RUN — NO CONTENT WILL BE PUBLISHED</span>
+            <span className="font-bold text-brand-secure">테스트 모드 · 실제 SNS에는 게시되지 않습니다</span>
           ) : (
-            <span className="text-success">LIVE</span>
+            <span className="text-success">실제 게시 모드</span>
           )}
         </p>
         <button
@@ -105,7 +114,7 @@ export default function PublishPage({ params }: { params: Promise<{ id: string }
           disabled={busy}
           className="mt-3 rounded-md bg-primary px-4 py-2 text-sm font-semibold text-on-primary disabled:opacity-50"
         >
-          게시 Job 생성
+          SNS별 게시 준비하기
         </button>
       </div>
 
@@ -118,10 +127,10 @@ export default function PublishPage({ params }: { params: Promise<{ id: string }
               <span className="font-semibold">{jb.platform}</span>
               <Badge s={jb.status} />
               <span className="text-xs text-subtle">{jb.content_type}</span>
-              {jb.dry_run && <span className="text-[11px] font-bold text-brand-secure">DRY</span>}
-              {jb.dead_lettered && <span className="text-[11px] font-bold text-brand-secure">DLQ</span>}
+              {jb.dry_run && <span className="text-[11px] font-bold text-brand-secure">테스트</span>}
+              {jb.dead_lettered && <span className="text-[11px] font-bold text-brand-secure">오류 보관함</span>}
               <span className="ml-auto text-xs text-subtle">
-                {jb.scheduled_at ? `${jb.scheduled_at} (${jb.timezone})` : "ASAP"}
+                {jb.scheduled_at ? `${jb.scheduled_at} (${jb.timezone})` : "바로 게시"}
               </span>
             </div>
             <p className="mt-1 truncate text-xs text-subtle">{jb.title}</p>
@@ -131,7 +140,7 @@ export default function PublishPage({ params }: { params: Promise<{ id: string }
               </a>
             )}
             {jb.last_error_type && (
-              <p className="text-xs text-brand-secure">error: {jb.last_error_type}</p>
+              <p className="text-xs text-brand-secure">오류: {jb.last_error_type}</p>
             )}
             <div className="mt-2 flex flex-wrap gap-2">
               {jb.approval_status !== "APPROVED" && (
@@ -141,7 +150,7 @@ export default function PublishPage({ params }: { params: Promise<{ id: string }
                   onClick={() => act(() => approvePublishJob(jb.id))}
                   className="rounded border border-hairline px-3 py-1 text-xs"
                 >
-                  승인
+                  게시 승인하기
                 </button>
               )}
               <button
@@ -150,7 +159,7 @@ export default function PublishPage({ params }: { params: Promise<{ id: string }
                 onClick={() => act(() => runPublishJob(jb.id))}
                 className="rounded border border-hairline px-3 py-1 text-xs"
               >
-                {dryRun ? "Dry Run" : "게시 실행"}
+                {dryRun ? "테스트 실행" : "지금 게시하기"}
               </button>
             </div>
           </section>

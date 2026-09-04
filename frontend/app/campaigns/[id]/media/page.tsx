@@ -111,7 +111,7 @@ export default function MediaPage({ params }: { params: Promise<{ id: string }> 
         disabled={busy}
         className="w-full rounded-md bg-primary px-4 py-3 text-sm font-semibold text-on-primary disabled:opacity-50"
       >
-        {busy ? "처리 중…" : "미디어 제작 시작 / 다시 실행"}
+        {busy ? "영상 제작 중…" : "영상 제작 시작"}
       </button>
 
       {data.render.video && (
@@ -119,7 +119,7 @@ export default function MediaPage({ params }: { params: Promise<{ id: string }> 
           href={`/campaigns/${id}/publish`}
           className="block rounded-md border border-hairline-strong px-4 py-2 text-center text-sm font-semibold text-ink"
         >
-          게시 (Phase 2) →
+          완성된 영상을 SNS에 게시하기 →
         </a>
       )}
 
@@ -132,7 +132,7 @@ export default function MediaPage({ params }: { params: Promise<{ id: string }> 
         ))}
       </section>
 
-      <Card title="비용 (kind별)">
+      <Card title="제작 단계별 비용">
         <div className="flex flex-wrap gap-3 text-sm">
           {Object.entries(data.cost_by_kind).map(([k, v]) => (
             <span key={k} className="rounded bg-surface-2 px-2 py-1">
@@ -140,12 +140,12 @@ export default function MediaPage({ params }: { params: Promise<{ id: string }> 
             </span>
           ))}
           {Object.keys(data.cost_by_kind).length === 0 && (
-            <span className="text-subtle">아직 없음 (mock = $0)</span>
+            <span className="text-subtle">아직 사용된 비용이 없습니다.</span>
           )}
         </div>
       </Card>
 
-      <Card title={`Scene Monitor (${data.scene_monitor.length})`}>
+      <Card title={`장면별 제작 현황 (${data.scene_monitor.length}개)`}>
         <div className="space-y-2">
           {data.scene_monitor.map((sc) => (
             <div key={sc.scene_id} className="flex items-center gap-3 border-t border-hairline pt-2">
