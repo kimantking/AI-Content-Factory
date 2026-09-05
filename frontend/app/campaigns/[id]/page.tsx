@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { use, useEffect, useRef, useState } from "react";
-import { getCampaign, getMedia, type CampaignDetail, type MediaStatus } from "@/lib/api";
+import { getCampaign, getMedia, startMedia, type CampaignDetail, type MediaStatus } from "@/lib/api";
 import { PageHeader, Card, CardBody, CardTitle, ErrorState, Metric, Skeleton, SkeletonText } from "@/components/ui/primitives";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { JobProgress, type JobStep } from "@/components/ui/JobProgress";
@@ -25,7 +25,20 @@ export default function CampaignPage({ params }: { params: Promise<{ id: string 
   const [data, setData] = useState<CampaignDetail | null>(null);
   const [media, setMedia] = useState<MediaStatus | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [resuming, setResuming] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  async function resumeMedia() {
+    setResuming(true);
+    setErr(null);
+    try {
+      await startMedia(id, true);
+      window.location.reload();
+    } catch (e) {
+      setErr(String(e));
+      setResuming(false);
+    }
+  }
 
   useEffect(() => {
     let alive = true;
@@ -142,6 +155,18 @@ export default function CampaignPage({ params }: { params: Promise<{ id: string 
       </Card>
 
       {data.error_message && <ErrorState title="파이프라인 오류" detail={data.error_message} recovering />}
+
+      {data.status === "FAILED" && mediaActive && (
+        <button
+          type="button"
+          onClick={resumeMedia}
+          disabled={resuming}
+          className="btn btn-primary w-full sm:w-auto"
+        >
+          <Icon name="refresh" size={15} />
+          {resuming ? "다시 시작하는 중…" : "멈춘 단계부터 다시 시작"}
+        </button>
+      )}
 
       {data.status === "SUCCESS" && (
         <div className="flex flex-wrap gap-2">
