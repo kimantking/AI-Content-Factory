@@ -104,6 +104,18 @@ export async function listCampaigns(limit = 50): Promise<CampaignSummary[]> {
   return r.json();
 }
 
+export async function cancelCampaign(id: string): Promise<{ ok: boolean; status: string }> {
+  const r = await fetch(`${API_BASE}/api/campaigns/${id}/cancel`, { method: "POST" });
+  if (!r.ok) throw new Error(`작업 중지 실패 (${r.status})`);
+  return r.json();
+}
+
+export async function deleteCampaign(id: string): Promise<{ ok: boolean; deleted_records: number }> {
+  const r = await fetch(`${API_BASE}/api/campaigns/${id}`, { method: "DELETE" });
+  if (!r.ok) throw new Error(`작업 삭제 실패 (${r.status})`);
+  return r.json();
+}
+
 export type MediaStatus = {
   campaign_id: string;
   media_status: string;
