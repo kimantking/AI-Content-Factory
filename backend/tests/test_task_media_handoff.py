@@ -87,3 +87,17 @@ def test_platform_adapt_uses_korean_master_copy_when_local_model_returns_english
     _require_korean(result, ("hook", "script", "title", "caption"), task="test")
     assert result["script"] == "오늘의 핵심 내용을 한국어로 설명합니다."
     assert result["cta"] == "다음 이야기도 확인해 보세요."
+
+
+def test_platform_adapt_builds_korean_script_when_master_copy_is_also_english():
+    from app.agents.media_nodes import _korean_platform_fallback, _require_korean
+
+    result = _korean_platform_fallback(
+        {"hook": "English hook", "script": "English script", "title": "English title",
+         "caption": "English caption"},
+        {"topic": "요즘 핫한 이야기", "master_hook": "English hook",
+         "master_script": "English master script", "usable_fact_texts": []},
+    )
+
+    _require_korean(result, ("hook", "script", "title", "caption"), task="test")
+    assert "요즘 핫한 이야기" in result["script"]
