@@ -79,8 +79,23 @@ def _korean_platform_fallback(data: dict, context: dict) -> dict:
     """
     out = dict(data or {})
     topic = str(context.get("topic") or "콘텐츠").strip()
+    if not _contains_korean(topic):
+        topic = "요청하신 콘텐츠"
     hook = str(context.get("master_hook") or topic).strip()
-    script = str(context.get("master_script") or hook).strip()
+    if not _contains_korean(hook):
+        hook = f"{topic}, 지금 핵심부터 확인해 보겠습니다."
+    script = str(context.get("master_script") or "").strip()
+    if not _contains_korean(script):
+        korean_facts = [
+            str(f).strip() for f in (context.get("usable_fact_texts") or [])
+            if _contains_korean(f)
+        ]
+        fact_text = " ".join(korean_facts[:3])
+        script = (
+            f"{hook} {fact_text} "
+            f"이번 영상에서는 {topic}의 중요한 내용을 짧고 명확하게 살펴봅니다. "
+            "핵심을 하나씩 확인하고 실제로 활용할 수 있는 부분까지 정리해 드리겠습니다."
+        ).strip()
     replacements = {
         "hook": hook,
         "script": script,
