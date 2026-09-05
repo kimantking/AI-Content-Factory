@@ -34,7 +34,8 @@ class HttpTrendClient:
 
 
 def _client():
-    return HttpTrendClient() if get_settings().trend_client == "http" else MockTrendClient()
+    settings = get_settings()
+    return HttpTrendClient() if not settings.mock_mode else MockTrendClient()
 
 
 class BaseTrendProvider:
