@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { ReferenceRow, getReference, listReferences } from "@/lib/api";
+import { ReferenceRow, getReference, listReferences, retryFailedReferences } from "@/lib/api";
 
 const STATUS: Record<string, string> = {
   READY: "bg-surface-2 text-success", EXTRACTED: "bg-surface-2 text-primary",
@@ -14,6 +14,8 @@ export default function ReferenceLibraryPage() {
   const [rows, setRows] = useState<ReferenceRow[]>([]);
   const [detail, setDetail] = useState<(ReferenceRow & { analyses: Record<string, unknown> }) | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [retrying, setRetrying] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
 
   const load = useCallback(() => {
     listReferences(wsId || undefined).then(setRows).catch((e) => setErr(String(e)));
@@ -24,6 +26,16 @@ export default function ReferenceLibraryPage() {
   }, []);
   useEffect(load, [load]);
 
+  const retryFailed = async () => {
+    setRetrying(true); setErr(null); setMsg(null);
+    try {
+      const result = await retryFailedReferences(wsId || undefined);
+      setMsg(`재시도 ${result.retried}개 · 학습 완료 ${result.ready}개 · 다시 실패 ${result.failed}개`);
+      load();
+    } catch (e) { setErr(String(e)); }
+    finally { setRetrying(false); }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-start gap-3">
@@ -31,16 +43,22 @@ export default function ReferenceLibraryPage() {
           <h1 className="text-2xl font-bold">학습 자료 보기</h1>
           <p className="mt-1 text-sm text-ink-subtle">AI가 읽었거나 보관 중인 자료를 확인하는 화면입니다.</p>
         </div>
-        <a href="/learn-studio" className="btn btn-primary ml-auto">새 자료 학습시키기</a>
+        <div className="ml-auto flex flex-wrap gap-2">
+          <button className="btn btn-secondary" disabled={retrying} onClick={retryFailed}>
+            {retrying ? "다시 읽는 중…" : "실패 자료 다시 읽기"}
+          </button>
+          <a href="/learn-studio" className="btn btn-primary">새 자료 학습시키기</a>
+        </div>
       </div>
       {err && <p className="text-sm text-brand-secure">{err}</p>}
+      {msg && <p className="text-sm text-success">{msg}</p>}
       <div className="overflow-x-auto rounded-lg border border-hairline bg-surface-1">
         <table className="w-full text-sm">
           <thead className="bg-surface-2 text-left text-xs text-ink-subtle">
             <tr>
               <th className="p-2">자료 제목 / 주소</th><th className="p-2">유형</th>
               <th className="p-2">목적</th><th className="p-2">상태</th>
-              <th className="p-2">학습 품질</th><th className="p-2">사용 권리</th><th className="p-2">안전 검사</th>
+              <th className="p-2">학습 품질</th><th className="p-2">사용 권리</th><th className="p-2">실패 이유</th>
             </tr>
           </thead>
           <tbody>
@@ -56,7 +74,7 @@ export default function ReferenceLibraryPage() {
                 <td className="p-2"><span className={"rounded px-1.5 py-0.5 text-xs " + (STATUS[r.status] ?? "bg-surface-2")}>{r.status}</span></td>
                 <td className="p-2 text-xs">{r.quality_score.toFixed(2)} · w{r.learning_weight.toFixed(2)}</td>
                 <td className="p-2 text-xs">{r.rights_status}</td>
-                <td className="p-2 text-xs">{r.injection_flag ? "⚠️" : "—"}</td>
+                <td className="max-w-xs p-2 text-xs text-brand-secure">{r.error || (r.injection_flag ? "안전하지 않은 지시 감지" : "—")}</td>
               </tr>
             ))}
           </tbody>
