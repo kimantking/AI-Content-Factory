@@ -7,7 +7,7 @@ from fastapi import APIRouter, Body, Depends, HTTPException, Query
 from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 
-from app.db.base import Base, get_db
+from app.db.base import get_db
 from app.db.models import Campaign
 from app.library import add_platform_to_campaign, content_detail, library_stats, list_content
 from app.library.search import global_search
@@ -66,18 +66,10 @@ def delete_content(campaign_id: str, db: Session = Depends(get_db)):
     campaign = db.get(Campaign, campaign_id)
     if campaign is None:
         raise HTTPException(404, "content not found")
-    if campaign.status == "RUNNING":
-        raise HTTPException(409, "진행 중인 콘텐츠는 완료 또는 실패 후 삭제할 수 있습니다.")
+    # Keep the library and work-centre buttons on one safe implementation.
+    from app.api.routes_campaigns import delete_campaign
 
-    deleted = 0
-    for table in reversed(Base.metadata.sorted_tables):
-        if table.name == Campaign.__tablename__ or "campaign_id" not in table.c:
-            continue
-        result = db.execute(table.delete().where(table.c.campaign_id == campaign_id))
-        deleted += max(0, int(result.rowcount or 0))
-    db.delete(campaign)
-    db.commit()
-    return {"ok": True, "campaign_id": campaign_id, "deleted_records": deleted + 1}
+    return delete_campaign(campaign_id, db)
 
 
 @router.get("/library/{campaign_id}/{tab}")
