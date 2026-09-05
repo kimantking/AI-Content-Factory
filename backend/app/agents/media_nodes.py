@@ -411,18 +411,30 @@ def gen_images_node(state: MediaState) -> dict:
                 placeholder_card(w, h, title=sc["narration"][:70],
                                  seed=prompt, watermark="").save(out_path, "PNG")
             elif vt == VisualType.STOCK_VIDEO:
-                key = asset_hash(provider=stock_provider.name, model="still", prompt=prompt,
-                                 settings={"w": w, "h": h}, aspect_ratio=spec.aspect_ratio)
-                if not cache.get(key, out_path):
-                    item = stock_provider.search(query=sc["visual_description"] or prompt,
-                                                 width=w, height=h, want_video=True, out_path=out_path)
-                    cache.put(key, out_path)
-                    provider_name, mode = item.provider, item.provider_mode.value
-                    meta = {"semantic_relevance_score": item.semantic_relevance_score}
-                    log_cost(session, campaign_id=cid, agent_name="Stock", kind="STOCK",
-                             provider=item.provider, amount_usd=item.cost)
+                if stock_provider is None:
+                    # No fake stock in live mode: create a real Google image and
+                    # animate it during rendering instead.
+                    vt = VisualType.AI_IMAGE
+                    res = img_provider.generate_image(
+                        prompt=prompt, negative_prompt=sc.get("negative_prompt", ""),
+                        width=w, height=h, out_path=out_path, seed=sc["scene_order"],
+                    )
+                    provider_name, mode, cost = res.provider, res.provider_mode.value, res.cost
+                    log_cost(session, campaign_id=cid, agent_name="Image Agent", kind="IMAGE",
+                             provider=res.provider, model=res.provider_mode.value, amount_usd=res.cost)
                 else:
-                    provider_name, mode = stock_provider.name, "MOCK"
+                    key = asset_hash(provider=stock_provider.name, model="still", prompt=prompt,
+                                     settings={"w": w, "h": h}, aspect_ratio=spec.aspect_ratio)
+                    if not cache.get(key, out_path):
+                        item = stock_provider.search(query=sc["visual_description"] or prompt,
+                                                     width=w, height=h, want_video=True, out_path=out_path)
+                        cache.put(key, out_path)
+                        provider_name, mode = item.provider, item.provider_mode.value
+                        meta = {"semantic_relevance_score": item.semantic_relevance_score}
+                        log_cost(session, campaign_id=cid, agent_name="Stock", kind="STOCK",
+                                 provider=item.provider, amount_usd=item.cost)
+                    else:
+                        provider_name, mode = stock_provider.name, stock_provider.mode.value
             else:  # AI_IMAGE (also AI_VIDEO downgraded here)
                 key = asset_hash(provider=img_provider.name, model="img", prompt=prompt,
                                  settings={"w": w, "h": h}, aspect_ratio=spec.aspect_ratio)
@@ -435,7 +447,7 @@ def gen_images_node(state: MediaState) -> dict:
                     log_cost(session, campaign_id=cid, agent_name="Image Agent", kind="IMAGE",
                              provider=res.provider, model=res.provider_mode.value, amount_usd=res.cost)
                 else:
-                    provider_name, mode = img_provider.name, "MOCK"
+                    provider_name, mode = img_provider.name, img_provider.mode.value
 
             vt_str = vt.value if isinstance(vt, VisualType) else str(vt)
             asset = _record_asset(session, cid=cid, content_id=content_id, scene_id=scene_id,
@@ -656,9 +668,12 @@ def thumbnail_node(state: MediaState) -> dict:
         ids = []
         for i, c in enumerate(concepts):
             path = os.path.join(thumb_dir, f"concept_{i + 1}.png")
-            render_concept(c, path, mock=True)
+            mock_asset = get_settings().mock_mode
+            render_concept(c, path, mock=mock_asset)
             a = _record_asset(session, cid=cid, content_id=content_id, scene_id=None,
-                              asset_type="thumbnail", provider="code+mock", mode="MOCK",
+                              asset_type="thumbnail",
+                              provider="code+mock" if mock_asset else "local-generated",
+                              mode="MOCK" if mock_asset else "REAL",
                               prompt=c.headline, path=path, mime="image/png",
                               meta={"concept": c.model_dump()})
             ids.append(a.id)
@@ -701,9 +716,11 @@ def platform_images_node(state: MediaState) -> dict:
                                   seed=f"{spec.key}:{i}")
                     paths.append(p)
             for p in paths:
+                mock_asset = get_settings().mock_mode
                 a = _record_asset(session, cid=cid, content_id=content.id, scene_id=None,
                                   asset_type="carousel" if spec.content_type.value == "CAROUSEL" else "image",
-                                  provider="code+mock", mode="MOCK", prompt=content.title,
+                                  provider="code+mock" if mock_asset else "local-generated",
+                                  mode="MOCK" if mock_asset else "REAL", prompt=content.title,
                                   path=p, mime="image/png", width=w, height=h)
                 ids.append(a.id)
             content.status = "PLANNED" if content.platform != state["primary_platform"] else content.status
