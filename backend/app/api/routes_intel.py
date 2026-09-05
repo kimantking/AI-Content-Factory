@@ -118,6 +118,35 @@ def get_reference(reference_id: str, db: Session = Depends(get_db)):
     return {**_ref_out(r), "analyses": analyses}
 
 
+@router.post("/references/retry-failed")
+def retry_failed_references(payload: dict = Body(default={}), db: Session = Depends(get_db)):
+    """Retry previously failed fetches after connectivity/configuration is fixed."""
+    q = db.query(ReferenceSource).filter(ReferenceSource.status == "FETCH_FAILED")
+    workspace_id = payload.get("workspace_id")
+    if workspace_id:
+        q = q.filter(ReferenceSource.workspace_id == workspace_id)
+    failed = q.all()
+    if not failed:
+        return {"ok": True, "retried": 0, "ready": 0, "failed": 0, "jobs": []}
+
+    job_ids = sorted({r.learning_job_id for r in failed if r.learning_job_id})
+    for ref in failed:
+        ref.status = "PENDING"
+        ref.error = ""
+    db.flush()
+
+    results = [run_learning_job(db, job_id) for job_id in job_ids]
+    db.commit()
+    refreshed = db.query(ReferenceSource).filter(ReferenceSource.id.in_([r.id for r in failed])).all()
+    return {
+        "ok": True,
+        "retried": len(refreshed),
+        "ready": sum(r.status == "READY" for r in refreshed),
+        "failed": sum(r.status == "FETCH_FAILED" for r in refreshed),
+        "jobs": results,
+    }
+
+
 @router.get("/learning")
 def learning_dashboard(workspace_id: str | None = None, db: Session = Depends(get_db)):
     def _c(model, **f):
