@@ -24,6 +24,7 @@ _ORDER = {s: i for i, s in enumerate(MEDIA_STEPS)}
 
 class StartMediaRequest(BaseModel):
     platforms: list[str] | None = None
+    resume: bool = False
 
 
 class RegenerateRequest(BaseModel):
@@ -50,20 +51,31 @@ def start_media(campaign_id: str, payload: StartMediaRequest, db: Session = Depe
     camp = db.get(Campaign, campaign_id)
     if camp is None:
         raise HTTPException(404, "campaign not found")
-    if camp.status != "SUCCESS":
+    resumable_failure = (
+        payload.resume
+        and camp.status == "FAILED"
+        and (camp.current_step or "").startswith("media:")
+    )
+    if camp.status != "SUCCESS" and not resumable_failure:
         raise HTTPException(409, f"Phase 1-A not complete (status={camp.status})")
     platforms = payload.platforms or camp.platforms or ["youtube_shorts"]
+    if resumable_failure:
+        camp.status = "RUNNING"
+        camp.error_message = None
+        db.commit()
     s = get_settings()
     from app.celery_app import celery_app  # noqa: F401
     from app.tasks import run_media_task
 
     if s.run_inline:
-        run_media_task.apply(args=[campaign_id, platforms])
+        run_media_task.apply(args=[campaign_id, platforms], kwargs={"resume": payload.resume})
     else:
         try:
-            run_media_task.apply_async(args=[campaign_id, platforms], queue="render")
+            run_media_task.apply_async(
+                args=[campaign_id, platforms], kwargs={"resume": payload.resume}, queue="render"
+            )
         except Exception:
-            run_media_task.apply(args=[campaign_id, platforms])
+            run_media_task.apply(args=[campaign_id, platforms], kwargs={"resume": payload.resume})
     return {"campaign_id": campaign_id, "platforms": platforms, "state": "started"}
 
 
