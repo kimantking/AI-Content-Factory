@@ -857,6 +857,8 @@ export const listReferences = (workspaceId?: string, status?: string): Promise<R
     ...(workspaceId ? { workspace_id: workspaceId } : {}),
     ...(status ? { status } : {}),
   })}`);
+export const retryFailedReferences = (workspaceId?: string): Promise<{ retried: number; ready: number; failed: number }> =>
+  jpost("/api/references/retry-failed", workspaceId ? { workspace_id: workspaceId } : {});
 export const getReference = (id: string): Promise<ReferenceRow & { analyses: Record<string, unknown> }> =>
   jget(`/api/references/${id}`);
 export const learningDashboard = (workspaceId?: string): Promise<LearningDashboard> =>
