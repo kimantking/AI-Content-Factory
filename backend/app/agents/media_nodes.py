@@ -70,6 +70,33 @@ def _require_korean(data: dict, fields: tuple[str, ...], *, task: str) -> None:
         )
 
 
+def _korean_platform_fallback(data: dict, context: dict) -> dict:
+    """Keep production moving when a small local model ignores ko-KR.
+
+    Reuse the already approved Korean master copy instead of accepting English
+    or failing the whole video pipeline.  Provider output is retained for every
+    field that did pass the language guard.
+    """
+    out = dict(data or {})
+    topic = str(context.get("topic") or "콘텐츠").strip()
+    hook = str(context.get("master_hook") or topic).strip()
+    script = str(context.get("master_script") or hook).strip()
+    replacements = {
+        "hook": hook,
+        "script": script,
+        "title": topic,
+        "caption": f"{topic}의 핵심 내용을 짧고 명확하게 정리했습니다.",
+        "cta": "다음 이야기도 확인해 보세요.",
+        "notes": "한국어 원본 대본을 사용한 안전 변환본입니다.",
+    }
+    for field, replacement in replacements.items():
+        if not _contains_korean(out.get(field)):
+            out[field] = replacement
+    if not isinstance(out.get("hashtags"), list) or not out["hashtags"]:
+        out["hashtags"] = ["#한국콘텐츠", "#핵심정리"]
+    return out
+
+
 # --------------------------------------------------------------------------- #
 # helpers
 # --------------------------------------------------------------------------- #
@@ -203,9 +230,7 @@ def platform_adapt_node(state: MediaState) -> dict:
                 if spec.key == state["primary_platform"]:
                     out_content_id = row.id
                 continue
-            data = _llm_json(
-                "platform_adapt", "platform_adapt",
-                {
+            adapt_context = {
                     "output_language": "ko-KR", "target_market": "South Korea",
                     "platform": spec.key, "content_type": spec.content_type.value,
                     "family": spec.family.value, "target_duration_s": spec.target_duration_s,
@@ -218,9 +243,13 @@ def platform_adapt_node(state: MediaState) -> dict:
                     "master_script": state.get("master_script", ""),
                     "usable_fact_texts": state.get("usable_fact_texts", []),
                     "recent_cta_types": [],
-                },
+                }
+            data = _llm_json(
+                "platform_adapt", "platform_adapt",
+                adapt_context,
                 cid=cid, session=session, agent="Platform Adaptation Agent",
             )
+            data = _korean_platform_fallback(data, adapt_context)
             _require_korean(data, ("hook", "script", "title", "caption"), task="platform_adapt")
             row = PlatformContent(
                 campaign_id=cid, platform=spec.key, content_type=spec.content_type.value,
