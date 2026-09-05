@@ -69,7 +69,7 @@ export default function MediaPage({ params }: { params: Promise<{ id: string }> 
     setBusy(true);
     setErr(null);
     try {
-      await startMedia(id);
+      await startMedia(id, data?.media_status === "FAILED");
       setTimeout(poll, 800);
     } catch (e) {
       setErr(String(e));
@@ -111,7 +111,13 @@ export default function MediaPage({ params }: { params: Promise<{ id: string }> 
         disabled={busy}
         className="w-full rounded-md bg-primary px-4 py-3 text-sm font-semibold text-on-primary disabled:opacity-50"
       >
-        {busy ? "영상 제작 중…" : "영상 제작 시작"}
+        {busy
+          ? "영상 제작 요청 중…"
+          : data.media_status === "FAILED"
+            ? "멈춘 단계부터 다시 시작"
+            : data.media_status === "RUNNING"
+              ? "영상 제작 진행 중"
+              : "영상 제작 시작"}
       </button>
 
       {data.render.video && (
