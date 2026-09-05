@@ -76,12 +76,18 @@ def test_delete_content_removes_campaign_and_children(sample):
         assert db.query(Asset).filter_by(campaign_id=cid).count() == 0
 
 
-def test_delete_running_content_is_blocked():
+def test_delete_running_content_stops_then_deletes(monkeypatch):
+    from app.api import routes_campaigns
+
+    monkeypatch.setattr(routes_campaigns, "_revoke_campaign_tasks", lambda _cid: ["running-task"])
     cid = str(uuid.uuid4())
     with session_scope() as db:
         db.add(Campaign(id=cid, topic="진행 중", audience_goal="VIEWS",
                         platforms=["youtube_shorts"], status="RUNNING"))
-    assert client.delete(f"/api/library/{cid}").status_code == 409
+    response = client.delete(f"/api/library/{cid}")
+    assert response.status_code == 200
+    assert response.json()["ok"] is True
+    assert client.get(f"/api/library/{cid}").status_code == 404
 
 
 def test_missing_content_404():

@@ -57,6 +57,11 @@ def start_authorization(session, platform: str, redirect_uri: str | None = None)
     session.flush()
 
     client = _clients().get(platform, {})
+    if not s.mock_mode and (not client.get("client_id") or not client.get("client_secret")):
+        raise PublishError(
+            PublishErrorType.PERMISSION_MISSING,
+            f"{platform} OAuth client_id/client_secret가 설정되지 않았습니다",
+        )
     params = {
         "response_type": "code",
         "client_id": client.get("client_id", "MOCK_CLIENT_ID"),
@@ -98,7 +103,10 @@ def complete_authorization(session, platform: str, state: str, code: str) -> dic
         # wired without verified credentials -> signal clearly.
         raise PublishError(PublishErrorType.PERMISSION_MISSING,
                            "real OAuth token exchange not implemented — verified credentials required")
-    # MOCK: synthesise a token bundle
+    if not s.mock_mode:
+        raise PublishError(PublishErrorType.PERMISSION_MISSING,
+                           "실사용 OAuth 토큰 교환 어댑터가 아직 연결되지 않았습니다")
+    # Tests/dev mock only: synthesize a token bundle.
     return {
         "provider_mode": "MOCK",
         "access_token": f"mock-access-{secrets.token_hex(8)}",
@@ -120,6 +128,9 @@ def refresh_token(platform: str, refresh_token_value: str | None) -> dict:
     if client.get("client_id") and s.platform_client == "http":
         raise PublishError(PublishErrorType.PERMISSION_MISSING,
                            "real token refresh not implemented — verified credentials required")
+    if not s.mock_mode:
+        raise PublishError(PublishErrorType.PERMISSION_MISSING,
+                           "실사용 OAuth 토큰 갱신 어댑터가 아직 연결되지 않았습니다")
     return {
         "provider_mode": "MOCK",
         "access_token": f"mock-access-{secrets.token_hex(8)}",

@@ -8,6 +8,7 @@ import {
   learningDashboard as getReferenceLearningDashboard,
   memoryAction,
   runLearning,
+  retryFailedReferences,
 } from "@/lib/api";
 
 const SBADGE: Record<string, string> = {
@@ -87,6 +88,12 @@ export default function LearningPage() {
       setBusy(false);
     }
   }
+  async function retryReferences() {
+    setBusy(true); setErr(null);
+    try { await retryFailedReferences(wsId || undefined); await load(); }
+    catch (e) { setErr(String(e)); }
+    finally { setBusy(false); }
+  }
 
   if (err) return <p className="text-brand-secure">{err}</p>;
   if (!dash) return <p className="text-subtle">불러오는 중…</p>;
@@ -107,7 +114,12 @@ export default function LearningPage() {
             <h2 className="text-sm font-bold">자료 학습 상태</h2>
             <p className="mt-1 text-xs text-ink-subtle">URL로 넣은 자료를 읽고 분석한 결과입니다.</p>
           </div>
-          <a href="/references" className="btn btn-secondary ml-auto">읽은 자료 확인</a>
+          <div className="ml-auto flex flex-wrap gap-2">
+            <button className="btn btn-secondary" disabled={busy} onClick={retryReferences}>
+              {busy ? "다시 읽는 중…" : "실패 자료 다시 읽기"}
+            </button>
+            <a href="/references" className="btn btn-secondary">읽은 자료 확인</a>
+          </div>
         </div>
         <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
           {[

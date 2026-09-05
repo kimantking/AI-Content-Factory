@@ -9,6 +9,7 @@ from app.providers.media.mock_stock import MockStockProvider
 from app.providers.media.mock_tts import MockTTSProvider
 from app.providers.media.storage import LocalStorage
 from app.schemas.media import ProviderMode
+from app.providers.errors import ProviderError
 
 
 def _paid_media_blocked() -> bool:
@@ -29,7 +30,9 @@ def get_image_provider():
         from app.providers.media.google_image import GoogleImageProvider
 
         return GoogleImageProvider()
-    return MockImageProvider()
+    if s.mock_mode:
+        return MockImageProvider()
+    raise ProviderError("실사용 이미지 공급자(Google)와 API 키를 설정하세요", "AUTH_ERROR")
 
 
 def get_video_provider():
@@ -41,7 +44,9 @@ def get_video_provider():
         from app.providers.media.google_video import GoogleVideoProvider
 
         return GoogleVideoProvider()
-    return None
+    if s.mock_mode:
+        return None
+    raise ProviderError("실사용 영상 공급자(Google/Veo)와 API 키를 설정하세요", "AUTH_ERROR")
 
 
 def get_tts_provider():
@@ -51,15 +56,23 @@ def get_tts_provider():
         from app.providers.media.elevenlabs_tts import ElevenLabsTTSProvider
 
         return ElevenLabsTTSProvider()
-    return MockTTSProvider()
+    if s.mock_mode:
+        return MockTTSProvider()
+    raise ProviderError("실사용 음성 공급자(ElevenLabs), API 키, Voice ID를 설정하세요", "AUTH_ERROR")
 
 
 def get_stock_provider():
-    return MockStockProvider()
+    return MockStockProvider() if get_settings().mock_mode else None
 
 
 def get_music_provider():
-    return MockMusicProvider()
+    provider = MockMusicProvider()
+    if not get_settings().mock_mode:
+        # This adapter really synthesizes an original local WAV; in live mode it
+        # is a zero-cost local generator, not simulated third-party stock music.
+        provider.name = "local-generated-music"
+        provider.mode = ProviderMode.REAL
+    return provider
 
 
 @lru_cache

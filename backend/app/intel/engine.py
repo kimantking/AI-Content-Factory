@@ -269,6 +269,15 @@ def run_learning_job(db: Session, job_id: str) -> dict:
     docs: dict[str, dict] = {}
     counters = {"fetched": 0, "ready": 0, "blocked": 0, "duplicates": 0, "low_value": 0}
     for ref in refs:
+        if ref.status == "READY":
+            counters["ready"] += 1
+            continue
+        if ref.status == "DUPLICATE":
+            counters["duplicates"] += 1
+            continue
+        if ref.status in ("LOW_VALUE", "REMOVED"):
+            counters["low_value"] += ref.status == "LOW_VALUE"
+            continue
         if ref.status == "BLOCKED":
             counters["blocked"] += 1
             continue

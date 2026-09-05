@@ -87,6 +87,8 @@ def oauth_callback(platform: str, state: str, code: str, db: Session = Depends(g
 @router.post("/accounts/{platform}/mock-connect")
 def mock_connect(platform: str, payload: ConnectMockRequest, db: Session = Depends(get_db)):
     """Dev/test helper: create a CONNECTED mock account without the redirect dance."""
+    if not get_settings().mock_mode:
+        raise HTTPException(403, "실사용 모드에서는 Mock 계정을 연결할 수 없습니다.")
     from app.publishing.capabilities import get_capability
 
     cap = get_capability(platform)

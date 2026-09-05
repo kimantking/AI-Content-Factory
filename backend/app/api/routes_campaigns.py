@@ -1,11 +1,15 @@
 from __future__ import annotations
 
+import json
+import shutil
+from pathlib import Path
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.config import get_settings
-from app.db.base import get_db
+from app.db.base import Base, get_db
 from app.db.models import (
     AgentRun,
     Campaign,
@@ -153,6 +157,91 @@ def resume_campaign(campaign_id: str, db: Session = Depends(get_db)) -> Campaign
             run_campaign_task.apply(args=args, kwargs=kw)
     db.refresh(camp)
     return _summary(camp)
+
+
+def _task_mentions_campaign(task: dict, campaign_id: str) -> bool:
+    """Celery inspect payloads vary by version; match only serialized task args."""
+    try:
+        return campaign_id in json.dumps(
+            {"args": task.get("args"), "kwargs": task.get("kwargs")},
+            ensure_ascii=False,
+        )
+    except (TypeError, ValueError):
+        return False
+
+
+def _revoke_campaign_tasks(campaign_id: str) -> list[str]:
+    """Cancel queued tasks and terminate an active render child process."""
+    from app.celery_app import celery_app
+
+    revoked: list[str] = []
+    try:
+        inspector = celery_app.control.inspect(timeout=0.75)
+        snapshots = [inspector.active() or {}, inspector.reserved() or {}, inspector.scheduled() or {}]
+        for snapshot in snapshots:
+            for tasks in snapshot.values():
+                for entry in tasks or []:
+                    task = entry.get("request", entry)
+                    task_id = task.get("id")
+                    if task_id and _task_mentions_campaign(task, campaign_id) and task_id not in revoked:
+                        celery_app.control.revoke(task_id, terminate=True, signal="SIGTERM")
+                        revoked.append(task_id)
+    except Exception:  # worker unavailable: DB cancellation still prevents resume/retry
+        pass
+    return revoked
+
+
+def _remove_campaign_files(campaign_id: str) -> None:
+    settings = get_settings()
+    targets = [
+        Path(settings.storage_root).resolve() / "campaigns" / campaign_id,
+        Path(settings.output_root).resolve() / campaign_id,
+    ]
+    for target in targets:
+        # campaign_id is a DB key, but keep filesystem deletion narrowly contained.
+        if target.name == campaign_id and target.is_dir():
+            shutil.rmtree(target)
+
+
+@router.post("/campaigns/{campaign_id}/cancel")
+def cancel_campaign(campaign_id: str, db: Session = Depends(get_db)):
+    camp = db.get(Campaign, campaign_id)
+    if camp is None:
+        raise HTTPException(404, "campaign not found")
+    if camp.status in {"SUCCESS", "FAILED", "CANCELLED"}:
+        return {"ok": True, "campaign_id": campaign_id, "status": camp.status, "revoked_tasks": []}
+
+    # Persist first so a cooperative pipeline sees cancellation even if no worker
+    # answers Celery inspect (for example while Docker is restarting).
+    camp.status = "CANCELLED"
+    camp.current_step = "cancelled"
+    camp.error_message = None
+    db.query(AgentRun).filter_by(campaign_id=campaign_id, status="RUNNING").update(
+        {AgentRun.status: "CANCELLED"}, synchronize_session=False
+    )
+    db.commit()
+    revoked = _revoke_campaign_tasks(campaign_id)
+    return {"ok": True, "campaign_id": campaign_id, "status": "CANCELLED", "revoked_tasks": revoked}
+
+
+@router.delete("/campaigns/{campaign_id}")
+def delete_campaign(campaign_id: str, db: Session = Depends(get_db)):
+    """Stop work, remove generated files, then remove every campaign DB row."""
+    camp = db.get(Campaign, campaign_id)
+    if camp is None:
+        raise HTTPException(404, "campaign not found")
+
+    _revoke_campaign_tasks(campaign_id)
+    _remove_campaign_files(campaign_id)
+    deleted = 0
+    for table in reversed(Base.metadata.sorted_tables):
+        if table.name == Campaign.__tablename__ or "campaign_id" not in table.c:
+            continue
+        result = db.execute(table.delete().where(table.c.campaign_id == campaign_id))
+        deleted += max(0, int(result.rowcount or 0))
+    db.delete(camp)
+    db.commit()
+    return {"ok": True, "campaign_id": campaign_id, "deleted_records": deleted + 1}
 
 
 def _summary(c: Campaign) -> CampaignSummary:

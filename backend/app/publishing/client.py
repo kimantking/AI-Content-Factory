@@ -71,6 +71,6 @@ class HttpPublisherClient:
 
 def get_client() -> PublisherClient:
     s = get_settings()
-    if s.platform_client == "http":
+    if not s.mock_mode:
         return HttpPublisherClient()
     return MockPublisherClient()

@@ -25,7 +25,8 @@ class HttpAnalyticsClient:
 
 
 def _client():
-    if get_settings().analytics_client == "http":
+    settings = get_settings()
+    if not settings.mock_mode:
         return HttpAnalyticsClient()
     return MockAnalyticsFetchClient()
 

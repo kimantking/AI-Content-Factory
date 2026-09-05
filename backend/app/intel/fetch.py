@@ -152,7 +152,7 @@ class BrowserFetchAdapter:
         )
 
 
-_client = MockReferenceClient()
+_client = None
 
 
 def set_client(client) -> None:
@@ -161,7 +161,12 @@ def set_client(client) -> None:
 
 
 def get_client():
-    return _client
+    # Production used to remain permanently wired to MockReferenceClient, so
+    # every real URL failed with "no mock registered for url". Keep injection
+    # available for deterministic tests, but select the real client by default.
+    if _client is not None:
+        return _client
+    return MockReferenceClient() if get_settings().mock_mode else HttpReferenceClient()
 
 
 def fetch(url: str, *, prefer_browser: bool = False) -> FetchResult:
