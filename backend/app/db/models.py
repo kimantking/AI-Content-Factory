@@ -257,8 +257,9 @@ class Scene(Base):
     visual_prompt: Mapped[dict] = mapped_column(JSON, default=dict)
     negative_prompt: Mapped[str] = mapped_column(Text, default="")
     source_ids: Mapped[list] = mapped_column(JSON, default=list)
-    camera_motion: Mapped[str] = mapped_column(String(24), default="SLOW_ZOOM_IN")
-    motion_effect: Mapped[str] = mapped_column(String(24), default="")
+    camera_motion: Mapped[str] = mapped_column(String(64), default="SLOW_ZOOM_IN")
+    # Stores a human-readable fallback/creative-direction reason, not an enum.
+    motion_effect: Mapped[str] = mapped_column(Text, default="")
     transition: Mapped[str] = mapped_column(String(16), default="CUT")
     subtitle_text: Mapped[str] = mapped_column(Text, default="")
     highlight_words: Mapped[list] = mapped_column(JSON, default=list)
