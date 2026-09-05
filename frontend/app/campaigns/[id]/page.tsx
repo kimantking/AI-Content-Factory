@@ -115,9 +115,9 @@ export default function CampaignPage({ params }: { params: Promise<{ id: string 
         <CardBody>
           <div className="grid grid-cols-2 gap-y-4 sm:grid-cols-4 lg:grid-cols-6">
             <Metric size="sm" label="현재 단계" value={STEP_KO[data.current_step ?? ""] ?? data.current_step ?? "-"} />
-            <Metric size="sm" label="현재 에이전트" value={runningAgent?.agent_name ?? "-"} />
-            <Metric size="sm" label="모델" value={runningAgent?.model ?? "-"} />
-            <Metric size="sm" label="Provider" value={runningAgent?.provider ?? "-"} />
+            <Metric size="sm" label="현재 처리" value={mediaActive ? "영상 제작 파이프라인" : (runningAgent?.agent_name ?? "-")} />
+            <Metric size="sm" label="텍스트 모델" value={runningAgent?.model ?? "-"} />
+            <Metric size="sm" label="영상 공급자" value={mediaActive ? "Google AI · ElevenLabs" : (runningAgent?.provider ?? "-")} />
             <Metric size="sm" label="장면 진행" value={totalScenes ? `${doneScenes} / ${totalScenes}` : "-"} />
             <Metric size="sm" label="경과" value={elapsed(data.created_at)} />
           </div>

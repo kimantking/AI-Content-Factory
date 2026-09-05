@@ -186,6 +186,11 @@ def platform_adapt_node(state: MediaState) -> dict:
     strat = state.get("strategy", {})
     out_content_id = None
     with session_scope() as session:
+        # Show the active node before the potentially slow LLM call.
+        camp = session.get(Campaign, cid)
+        if camp:
+            camp.current_step = "media:platform_adapt"
+            session.flush()
         existing = {c.platform: c for c in
                     session.query(PlatformContent).filter_by(campaign_id=cid).all()}
         for pkey in state["requested_platforms"]:
@@ -234,8 +239,6 @@ def platform_adapt_node(state: MediaState) -> dict:
             if spec.key == state["primary_platform"]:
                 out_content_id = row.id
                 row.status = "RUNNING"
-        camp = session.get(Campaign, cid)
-        camp.current_step = "media:platform_adapt"
     return {"content_id": out_content_id}
 
 

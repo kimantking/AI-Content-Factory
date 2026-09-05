@@ -208,11 +208,11 @@ export type VideoQA = {
   error?: string;
 };
 
-export async function startMedia(id: string): Promise<unknown> {
+export async function startMedia(id: string, resume = false): Promise<unknown> {
   const r = await fetch(`${API_BASE}/api/campaigns/${id}/media`, {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: "{}",
+    body: JSON.stringify({ resume }),
   });
   if (!r.ok) throw new Error(`start media failed: ${r.status}`);
   return r.json();

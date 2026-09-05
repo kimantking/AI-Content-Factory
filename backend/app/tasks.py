@@ -74,14 +74,14 @@ def run_campaign_task(self, campaign_id: str, topic: str,
 @celery_app.task(bind=True, name="run_media", queue="render", max_retries=2, default_retry_delay=5)
 def run_media_task(self, campaign_id: str, platforms: list[str] | None = None, resume: bool = False):
     try:
-        state = run_media_pipeline(campaign_id, platforms, resume=resume)
+        state = run_media_pipeline(
+            campaign_id, platforms, resume=resume or self.request.retries > 0,
+        )
         return {"campaign_id": campaign_id, "status": state.get("status")}
     except Exception as exc:  # noqa: BLE001
         etype = getattr(exc, "error_type", type(exc).__name__)
         if etype in NON_RETRYABLE or self.request.retries >= self.max_retries:
-            with session_scope() as session:
-                session.add(ErrorLog(campaign_id=campaign_id, scope="media_task",
-                                     error_type=etype, message=str(exc)[:2000]))
+            _mark_failed(campaign_id, exc)
             raise
         raise self.retry(exc=exc)
 
