@@ -37,7 +37,7 @@ def test_prompt_persists_separately_and_reaches_gateway(monkeypatch):
 
     captured = {}
 
-    def capture(**kwargs):
+    def capture(*args, **kwargs):
         captured.update(kwargs)
         raise RuntimeError("test stops before paid calls")
 
