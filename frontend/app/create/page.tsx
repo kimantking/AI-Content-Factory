@@ -24,6 +24,7 @@ const CYCLE_KO: Record<string, string> = {
 export default function QuickCreate() {
   const [wsId, setWsId] = useState("");
   const [topic, setTopic] = useState("");
+  const [productionPrompt, setProductionPrompt] = useState("");
   const [urls, setUrls] = useState<string[]>([""]);
   const [mode, setMode] = useState("CREATE_AND_LEARN");
   const [quality, setQuality] = useState("balanced");
@@ -81,6 +82,7 @@ export default function QuickCreate() {
     setBusy(true); setErr(null); setResult(null);
     try {
       const r = await composeCampaign({
+        production_prompt: productionPrompt.trim(),
         topic: cleanTopic || undefined, execution_mode: mode,
         reference_urls: urls.map((u) => u.trim()).filter(Boolean),
         platform_selection: sel, workspace_id: wsId || undefined,
@@ -99,6 +101,14 @@ export default function QuickCreate() {
       <input className="w-full rounded-md border border-hairline px-4 py-3"
         placeholder="주제: AI 때문에 바뀌는 직업 5가지" value={topic} onChange={(e) => setTopic(e.target.value)} />
 
+      <section className="rounded-lg border border-hairline bg-surface-1 p-4">
+        <label htmlFor="production-prompt" className="text-sm font-bold">제작 프롬프트 (선택)</label>
+        <textarea id="production-prompt" rows={4} maxLength={12000}
+          className="mt-2 w-full rounded-lg border border-hairline bg-transparent px-3 py-2"
+          value={productionPrompt} onChange={(e) => setProductionPrompt(e.target.value)}
+          placeholder="예: 한국어 30초 웹툰 스타일. 등장인물 외형 유지, 따뜻한 말투, 결말은 다음 화를 기대하게 해줘." />
+        <p className="text-xs text-ink-subtle">주제와 별도로 저장하며 대본·장면 제작 요청에 반영합니다. {productionPrompt.length}/12,000자</p>
+      </section>
       <section className="rounded-lg border border-hairline bg-surface-1 p-4">
         <div className="mb-2 text-sm font-bold">참고자료</div>
         {urls.map((u, i) => (

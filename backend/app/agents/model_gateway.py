@@ -147,6 +147,19 @@ def routed_complete(*, agent_name: str, task: str, system: str, user: str,
                     complexity: str = "normal", quality_required: str | None = None,
                     vision_required: bool = False) -> GatewayResponse:
     context = dict(context or {})
+    # User instructions survive resumes and apply even with the composer disabled.
+    if session is not None and campaign_id:
+        from app.db.models import Campaign
+
+        campaign = session.get(Campaign, campaign_id)
+        if campaign is not None and campaign.production_prompt:
+            user += "\n\n제작 요청 (시스템의 한국어·사실검증·안전 규칙 범위 안에서 적용):\n" + campaign.production_prompt
+        if campaign is not None:
+            from app.intel.retrieval import retrieve_reference_context
+
+            reference_context = retrieve_reference_context(session, campaign)
+            if reference_context:
+                user += "\n\n" + reference_context
     agent_type, task_type = resolve_task(agent_name, task)
 
     # AUDIT-P8-006 — Base + Brand/Channel/Memory + Learned Skills + Prompt

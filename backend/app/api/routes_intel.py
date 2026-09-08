@@ -421,6 +421,9 @@ def compose_campaign(payload: dict = Body(...), db: Session = Depends(get_db)):
     s = get_settings()
     mode = resolve_execution_mode(payload.get("execution_mode", "CREATE_AND_LEARN"))
     topic = (payload.get("topic") or "").strip()
+    production_prompt = payload.get("production_prompt") or ""
+    if not isinstance(production_prompt, str) or len(production_prompt) > 12000:
+        raise HTTPException(400, "제작 프롬프트는 12,000자 이하의 텍스트여야 합니다.")
     urls = payload.get("reference_urls") or []
     ws = payload.get("workspace_id")
     br = payload.get("brand_id")
@@ -431,7 +434,8 @@ def compose_campaign(payload: dict = Body(...), db: Session = Depends(get_db)):
 
     campaign_id = None
     if not is_learn_only(mode):
-        camp = Campaign(topic=topic, audience_goal=(payload.get("audience_goal") or "BALANCED").upper(),
+        camp = Campaign(topic=topic, production_prompt=production_prompt.strip(),
+                        audience_goal=(payload.get("audience_goal") or "BALANCED").upper(),
                         platforms=[], status="WAITING", workspace_id=ws, brand_id=br, channel_id=ch,
                         execution_mode=mode.value)
         db.add(camp)
