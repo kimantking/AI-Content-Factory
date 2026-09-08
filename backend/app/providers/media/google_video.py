@@ -13,7 +13,11 @@ No paid video call is made by any test.
 from __future__ import annotations
 
 import base64
+import hashlib
+import json
 import time
+from pathlib import Path
+from urllib.parse import urlparse
 
 from app.config import get_settings
 from app.providers.media import runtime
@@ -44,15 +48,28 @@ class GoogleVideoProvider:
         if reference_image:
             try:
                 with open(reference_image, "rb") as f:
-                    instance["image"] = {"bytesBase64Encoded": base64.b64encode(f.read()).decode()}
+                    instance["image"] = {"bytesBase64Encoded": base64.b64encode(f.read()).decode(),
+                                         "mimeType": "image/png"}
             except OSError:
                 pass
         params = {"aspectRatio": "16:9" if width >= height else "9:16"}
-        if duration:
-            params["durationSeconds"] = int(round(duration))
-        op = http_json(submit, method="POST", body={"instances": [instance], "parameters": params},
-                       timeout=self._timeout, vendor="google")
-        op_name = op.get("name")
+        # Scene timing is normalized by our renderer. Veo 3 clips use supported
+        # eight-second generation rather than arbitrary narration durations.
+        params["durationSeconds"] = 8
+        payload = {"instances": [instance], "parameters": params}
+        fingerprint = hashlib.sha256(json.dumps({"model": self._model, "payload": payload},
+                                                sort_keys=True).encode()).hexdigest()
+        checkpoint = Path(out_path + ".operation.json")
+        saved = json.loads(checkpoint.read_text()) if checkpoint.is_file() else {}
+        op_name = saved.get("name") if saved.get("fingerprint") == fingerprint else None
+        if not op_name:
+            op = http_json(submit, method="POST", body=payload,
+                           timeout=self._timeout, vendor="google")
+            op_name = op.get("name")
+            if op_name:
+                temporary = checkpoint.with_suffix(".tmp")
+                temporary.write_text(json.dumps({"name": op_name, "fingerprint": fingerprint}))
+                temporary.replace(checkpoint)
         if not op_name:
             raise provider_error("google", "PROVIDER_ERROR", "no operation name from predictLongRunning")
 
@@ -84,15 +101,18 @@ class GoogleVideoProvider:
         )
 
     def _extract_video(self, response: dict) -> bytes:
-        preds = response.get("predictions") or response.get("generatedVideos") or []
+        preds = ((response.get("generateVideoResponse") or {}).get("generatedSamples")
+                 or response.get("predictions") or response.get("generatedVideos") or [])
         for p in preds if isinstance(preds, list) else [preds]:
             if isinstance(p, dict):
                 if p.get("bytesBase64Encoded"):
                     return base64.b64decode(p["bytesBase64Encoded"])
                 uri = p.get("video", {}).get("uri") or p.get("uri") or p.get("fileUri")
                 if uri:
-                    sep = "&" if "?" in uri else "?"
-                    return http_bytes(f"{uri}{sep}key={self._key}", method="GET",
+                    parsed = urlparse(uri)
+                    if parsed.scheme != "https" or not (parsed.hostname or "").endswith(".googleapis.com"):
+                        raise provider_error("google", "PROVIDER_ERROR", "untrusted video download host")
+                    return http_bytes(uri, method="GET", headers={"x-goog-api-key": self._key},
                                       timeout=self._timeout, vendor="google")
         raise provider_error("google", "PROVIDER_ERROR", "no video payload in operation response")
 

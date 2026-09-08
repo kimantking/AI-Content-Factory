@@ -5,6 +5,7 @@ from langgraph.graph import END, START, StateGraph
 from app.agents.media_nodes import (
     edit_decision_node,
     gen_images_node,
+    gen_videos_node,
     gen_voice_node,
     load_inputs_node,
     media_qa_node,
@@ -28,6 +29,7 @@ def build_media_graph(checkpointer=None):
     g.add_node("scene_plan", scene_plan_node)
     g.add_node("visual_direct", visual_direct_node)
     g.add_node("gen_images", gen_images_node)
+    g.add_node("gen_videos", gen_videos_node)
     g.add_node("gen_voice", gen_voice_node)
     g.add_node("timing_subtitle", timing_subtitle_node)
     g.add_node("edit_decision", edit_decision_node)
@@ -39,7 +41,7 @@ def build_media_graph(checkpointer=None):
 
     order = [
         "load_inputs", "platform_adapt", "scene_plan", "visual_direct",
-        "gen_images", "gen_voice", "timing_subtitle", "edit_decision",
+        "gen_images", "gen_videos", "gen_voice", "timing_subtitle", "edit_decision",
         "render", "thumbnail", "platform_images", "run_media_qa", "persist_media",
     ]
     g.add_edge(START, order[0])

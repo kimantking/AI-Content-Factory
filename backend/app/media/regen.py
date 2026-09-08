@@ -39,7 +39,7 @@ def regenerate_scene(campaign_id: str, scene_id: str, *,
         scene.asset_id = None
 
         for a in session.query(Asset).filter(
-            Asset.scene_id == scene_id, Asset.asset_type.in_(["image", "audio"])
+            Asset.scene_id == scene_id, Asset.asset_type.in_(["image", "audio", "video"])
         ):
             if a.storage_path and os.path.isfile(a.storage_path):
                 try:

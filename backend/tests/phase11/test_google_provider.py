@@ -176,3 +176,43 @@ def test_no_paid_google_call_in_this_module(monkeypatch):
     import app.providers.media._http as h
     orig = h.urllib.request.urlopen
     assert callable(orig)   # nothing here should actually invoke it un-mocked
+
+
+def test_veo_rest_generated_samples_download(google_on, monkeypatch):
+    from app.providers.media import google_video as gv
+    seen = {}
+    monkeypatch.setattr(gv, "http_bytes", lambda url, **kw: seen.update(url=url, **kw) or b"video")
+    result = gv.GoogleVideoProvider()._extract_video({"generateVideoResponse": {
+        "generatedSamples": [{"video": {"uri": "https://generativelanguage.googleapis.com/v1beta/files/test:download"}}]}})
+    assert result == b"video"
+    assert seen["headers"]["x-goog-api-key"] == "test-google-key"
+    assert "key=" not in seen["url"]
+
+
+def test_veo_rejects_untrusted_download(google_on):
+    from app.providers.media.google_video import GoogleVideoProvider
+    with pytest.raises(ProviderError, match="untrusted"):
+        GoogleVideoProvider()._extract_video({"generatedVideos": [{"video": {"uri": "https://evil.example/a"}}]})
+
+
+def test_timeout_resumes_saved_operation_without_resubmitting(google_on, monkeypatch, tmp_path):
+    from app.providers.media import google_video as gv
+    submits = []
+
+    def request(url, **kwargs):
+        if kwargs.get("method") == "POST":
+            submits.append(url)
+            return {"name": "operations/test"}
+        return {"done": True, "response": {"predictions": [
+            {"bytesBase64Encoded": base64.b64encode(b"test-video").decode()}]}}
+
+    monkeypatch.setattr(gv, "http_json", request)
+    provider = gv.GoogleVideoProvider()
+    provider._max_wait = 0
+    args = dict(prompt="same scene", reference_image=None, duration=6, width=1920,
+                height=1080, camera_motion="", out_path=str(tmp_path / "resume.mp4"))
+    with pytest.raises(ProviderError):
+        provider.generate_video(**args)
+    provider._max_wait = 10
+    provider.generate_video(**args)
+    assert len(submits) == 1
