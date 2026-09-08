@@ -36,8 +36,9 @@ def test_registry_selects_google_only_when_configured(_base_settings):
     assert type(registry.get_image_provider()).__name__ == "GoogleImageProvider"
     assert type(registry.get_video_provider()).__name__ == "GoogleVideoProvider"
 
-    _base_settings.image_provider = "mock"      # provider name back to mock
-    assert type(registry.get_image_provider()).__name__ == "MockImageProvider"
+    _base_settings.image_provider = "mock"
+    with pytest.raises(ProviderError):
+        registry.get_image_provider()
 
 
 def test_media_provider_key_resolves_canonical_name(_base_settings):
@@ -60,7 +61,7 @@ def test_google_image_happy_path(google_on, monkeypatch, tmp_path):
     def fake_http_json(url, **kw):
         captured["url"] = url
         captured["body"] = kw.get("body")
-        return {"predictions": [{"bytesBase64Encoded": _PNG, "mimeType": "image/png"}]}
+        return {"candidates": [{"content": {"parts": [{"inlineData": {"data": _PNG, "mimeType": "image/png"}}]}}]}
 
     monkeypatch.setattr(gi, "http_json", fake_http_json)
     out = str(tmp_path / "img.png")
@@ -72,7 +73,7 @@ def test_google_image_happy_path(google_on, monkeypatch, tmp_path):
     assert res.mime_type == "image/png" and res.meta["cost_state"] == "UNKNOWN"
     assert res.cost == 0.0
     assert res.meta["aspect_ratio"] == "16:9"
-    assert captured["body"]["parameters"]["seed"] == 7
+    assert captured["body"]["generationConfig"]["imageConfig"]["aspectRatio"] == "16:9"
     assert "generativelanguage.googleapis.com" in captured["url"]
     import os
     assert os.path.getsize(out) > 0
@@ -83,8 +84,8 @@ def test_google_image_happy_path(google_on, monkeypatch, tmp_path):
 def test_google_image_aspect_ratio_mapping(google_on, monkeypatch, tmp_path, aspect, w, h):
     from app.providers.media import google_image as gi
     seen = {}
-    monkeypatch.setattr(gi, "http_json", lambda url, **kw: seen.update(kw["body"]["parameters"])
-                        or {"predictions": [{"bytesBase64Encoded": _PNG}]})
+    monkeypatch.setattr(gi, "http_json", lambda url, **kw: seen.update(kw["body"]["generationConfig"]["imageConfig"])
+                        or {"candidates": [{"content": {"parts": [{"inlineData": {"data": _PNG, "mimeType": "image/png"}}]}}]})
     gi.GoogleImageProvider().generate_image(prompt="x", negative_prompt="", width=w, height=h,
                                             out_path=str(tmp_path / "a.png"))
     assert seen["aspectRatio"] == aspect

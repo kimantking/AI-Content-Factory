@@ -46,7 +46,7 @@ class ElevenLabsTTSProvider:
 
     def synthesize(self, *, text: str, voice_id: str, language: str, speed: float,
                    emotion: str, style: str, out_path: str) -> MediaResult:
-        voice = voice_id or self._default_voice
+        voice = self._default_voice or voice_id
         if not voice:
             raise provider_error("elevenlabs", "NOT_CONFIGURED",
                                  "ELEVENLABS_VOICE_ID is not set and no voice_id was provided")
