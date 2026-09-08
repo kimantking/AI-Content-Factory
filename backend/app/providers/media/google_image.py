@@ -10,6 +10,7 @@ from __future__ import annotations
 import base64
 
 from app.config import get_settings
+from app.providers.media import runtime
 from app.providers.media._http import http_json, provider_error
 from app.providers.media.base import MediaResult
 from app.schemas.media import ProviderMode
@@ -55,7 +56,7 @@ class GoogleImageProvider:
 
     def __init__(self) -> None:
         s = get_settings()
-        self._key = s.google_api_key or s.image_api_key
+        self._key = runtime.key("google", s.image_api_key)
         self._base = s.google_api_base.rstrip("/")
         self._configured_model = s.google_image_model
         self._model = _effective_model(self._configured_model)

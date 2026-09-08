@@ -29,10 +29,24 @@ def _config(campaign_id: str) -> dict[str, Any]:
 
 def run_media_pipeline(campaign_id: str, platforms: list[str] | None = None,
                        *, resume: bool = False) -> dict:
-    with _checkpointer() as cp:
+    from app.db.base import session_scope
+    from app.db.models import Campaign
+    from app.providers.media.runtime import media_workspace
+
+    with session_scope() as session:
+        camp = session.get(Campaign, campaign_id)
+        if camp is None:
+            raise ValueError("campaign not found")
+        workspace_id = camp.workspace_id
+    with media_workspace(workspace_id), _checkpointer() as cp:
+        if not get_settings().mock_mode:
+            from app.providers.media.registry import get_tts_provider
+
+            tts = get_tts_provider()
+            tts.validate_configuration()
         graph = build_media_graph(checkpointer=cp)
         cfg = _config(campaign_id)
-        if resume:
+        if resume and graph.get_state(cfg).next:
             return graph.invoke(None, cfg)
         return graph.invoke(initial_media_state(campaign_id, platforms or []), cfg)
 

@@ -35,7 +35,8 @@ def test_registry_selects_elevenlabs_only_when_configured(_base_settings):
     assert type(registry.get_tts_provider()).__name__ == "ElevenLabsTTSProvider"
 
     _base_settings.tts_provider = "mock"
-    assert type(registry.get_tts_provider()).__name__ == "MockTTSProvider"
+    with pytest.raises(ProviderError):
+        registry.get_tts_provider()
 
 
 def test_elevenlabs_synthesize_writes_wav_with_alignment_duration(eleven_on, monkeypatch, tmp_path):

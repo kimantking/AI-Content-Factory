@@ -154,7 +154,7 @@ export default function CampaignPage({ params }: { params: Promise<{ id: string 
         </CardBody>
       </Card>
 
-      {data.error_message && <ErrorState title="파이프라인 오류" detail={data.error_message} recovering />}
+      {data.error_message && <ErrorState title="파이프라인 오류" detail={data.error_message} />}
 
       {data.status === "FAILED" && mediaActive && (
         <button
