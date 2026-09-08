@@ -9,7 +9,10 @@ depends_on = None
 
 
 def upgrade():
-    op.add_column("campaigns", sa.Column("production_prompt", sa.Text(), nullable=True))
+    # Initial migrations build tables from current metadata on a fresh install.
+    columns = {column["name"] for column in sa.inspect(op.get_bind()).get_columns("campaigns")}
+    if "production_prompt" not in columns:
+        op.add_column("campaigns", sa.Column("production_prompt", sa.Text(), nullable=True))
 
 
 def downgrade():
