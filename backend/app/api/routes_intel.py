@@ -123,8 +123,7 @@ def retry_failed_references(payload: dict = Body(default={}), db: Session = Depe
     """Retry previously failed fetches after connectivity/configuration is fixed."""
     q = db.query(ReferenceSource).filter(ReferenceSource.status == "FETCH_FAILED")
     workspace_id = payload.get("workspace_id")
-    if workspace_id:
-        q = q.filter(ReferenceSource.workspace_id == workspace_id)
+    q = q.filter(ReferenceSource.workspace_id == workspace_id)
     failed = q.all()
     if not failed:
         return {"ok": True, "retried": 0, "ready": 0, "failed": 0, "jobs": []}

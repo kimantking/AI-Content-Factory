@@ -56,9 +56,9 @@ export default function LearnStudioPage() {
       const r = await addReferences({ urls: list, execution_mode: "LEARN_ONLY", scope, purpose, workspace_id: wsId || undefined });
       const res = r.result as { counters?: Record<string, number>; datasets?: number; blueprints?: number; skills?: number };
       setMsg(
-        `학습 완료 · 준비 ${res.counters?.ready ?? 0} / 차단 ${res.counters?.blocked ?? 0} / 중복 ${res.counters?.duplicates ?? 0} · 데이터 항목 ${res.datasets ?? 0} · 제작 규칙 ${res.blueprints ?? 0} · 스킬 ${res.skills ?? 0}`,
+        `${r.status === "DONE" ? "자료 처리 완료" : r.status === "PARTIAL" ? "일부 자료만 처리됨" : "학습 실패"} · 준비 ${res.counters?.ready ?? 0} / 수집 실패 ${res.counters?.fetch_failed ?? 0} / 차단 ${res.counters?.blocked ?? 0} / 분석 대기 ${res.counters?.pending_analysis ?? 0} / 중복 ${res.counters?.duplicates ?? 0} · 데이터 항목 ${res.datasets ?? 0} · 제작 규칙 ${res.blueprints ?? 0} · 스킬 ${res.skills ?? 0}`,
       );
-      setUrls("");
+      if (r.status === "DONE") setUrls("");
       refresh();
     } catch (e) {
       setErr(String(e));

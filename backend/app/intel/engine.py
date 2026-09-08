@@ -142,6 +142,15 @@ def _process_reference(db: Session, ref: ReferenceSource, *, topic: str,
     doc["_video_profile"] = video_profile or {}
     text = doc.get("main_text", "")
 
+    if doc.get("_limited"):
+        ref.status, ref.error = "BLOCKED", "PDF 본문 추출이 지원되지 않습니다. 텍스트가 있는 웹 문서를 사용하세요."
+        db.flush()
+        return {"status": "BLOCKED"}
+    if ref.source_type in ("YOUTUBE", "VIDEO_PAGE") and not video_profile:
+        ref.status, ref.error = "BLOCKED", "영상 URL만으로 화면·음성을 분석하는 기능은 아직 지원되지 않습니다. 영상 분석 자료가 필요합니다."
+        db.flush()
+        return {"status": "BLOCKED"}
+
     inj = injection.scan(text + "\n" + "\n".join(doc.get("headings", [])))
     ref.injection_flag = inj["flag"]
     ref.injection_detail = {"severity": inj["severity"], "kinds": inj["kinds"],
@@ -267,7 +276,7 @@ def run_learning_job(db: Session, job_id: str) -> dict:
     ]
 
     docs: dict[str, dict] = {}
-    counters = {"fetched": 0, "ready": 0, "blocked": 0, "duplicates": 0, "low_value": 0}
+    counters = {"fetched": 0, "ready": 0, "blocked": 0, "duplicates": 0, "low_value": 0, "fetch_failed": 0}
     for ref in refs:
         if ref.status == "READY":
             counters["ready"] += 1
@@ -287,7 +296,7 @@ def run_learning_job(db: Session, job_id: str) -> dict:
         if st == "BLOCKED":
             counters["blocked"] += 1
         elif st == "FETCH_FAILED":
-            pass
+            counters["fetch_failed"] += 1
         elif st == "DUPLICATE":
             counters["duplicates"] += 1
         else:
@@ -353,13 +362,17 @@ def run_learning_job(db: Session, job_id: str) -> dict:
     job.datasets_written = datasets
     job.blueprints_created = blueprints
     job.skills_created = skills
-    job.status = "DONE"
+    counters["pending_analysis"] = sum(r.status == "EXTRACTED" for r in refs)
+    unusable = counters["blocked"] + counters["fetch_failed"] + counters["low_value"]
+    usable = counters["ready"] + counters["duplicates"]
+    job.status = ("PARTIAL" if usable and (unusable or counters["pending_analysis"]) else
+                  "DONE" if usable else "FAILED")
     job.finished_at = datetime.now(timezone.utc)
     job.result = {"counters": counters, "datasets": datasets, "blueprints": blueprints,
                   "skills": skills, "mode": mode.value,
                   "reference_only": mode.value == "REFERENCE_ONLY"}
     db.flush()
-    return {"ok": True, "job_id": job.id, **job.result}
+    return {"ok": bool(usable), "status": job.status, "job_id": job.id, **job.result}
 
 
 def _write_memory(db: Session, all_analyses: dict, *, workspace_id: str | None) -> None:
