@@ -140,9 +140,4 @@ def set_elevenlabs_voice(voice_id: str = Body(..., embed=True),
     patch = {"voice_id": voice_id, "voice_selected": present}
     saved = cred.set_meta("elevenlabs", patch, workspace_id=ws,
                           actor=(ctx.email if ctx else None) or "user")
-    # keep the running process consistent for this session
-    try:
-        get_settings().elevenlabs_voice_id = voice_id
-    except Exception:  # noqa: BLE001
-        pass
     return {**saved, "voice_present_in_account": present}

@@ -6,7 +6,7 @@ then extracts title / author / publisher / dates / headings / main text / tables
 important links / source references. Long documents are split into semantic
 chunks so an agent retrieves only what it needs.
 
-stdlib only (`html.parser`, `re`) — no new dependency.
+Trafilatura extracts article text; the stdlib parser retains metadata and a fallback.
 """
 from __future__ import annotations
 
@@ -160,6 +160,13 @@ def clean_and_extract(html: str, *, url: str = "") -> dict:
         seen.add(k)
         uniq.append(b)
     main_text = "\n".join(uniq).strip()
+    # Process only the already fetched HTML: URL validation and byte limits
+    # remain in our fetcher. No extra network request is made here.
+    from trafilatura import extract
+
+    extracted = extract(html or "", include_comments=False, include_tables=True)
+    if extracted:
+        main_text = extracted.strip()
 
     tables = [t for tag, t in p.blocks if tag in ("td", "th")]
     ext_links = [{"href": h, "anchor": anc} for h, anc in p.links

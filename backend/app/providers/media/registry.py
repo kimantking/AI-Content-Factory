@@ -3,6 +3,7 @@ from __future__ import annotations
 from functools import lru_cache
 
 from app.config import get_settings
+from app.providers.media import runtime
 from app.providers.media.mock_image import MockImageProvider
 from app.providers.media.mock_music import MockMusicProvider
 from app.providers.media.mock_stock import MockStockProvider
@@ -25,7 +26,7 @@ def _paid_media_blocked() -> bool:
 
 def get_image_provider():
     s = get_settings()
-    if (s.image_provider == "google" and not s.media_provider_is_mock("image")
+    if (s.image_provider == "google" and not s.mock_mode and runtime.key("google", s.image_api_key)
             and not _paid_media_blocked()):
         from app.providers.media.google_image import GoogleImageProvider
 
@@ -39,19 +40,21 @@ def get_video_provider():
     """Real Google/Veo adapter when configured; otherwise None so the pipeline
     falls back to the Image Motion Engine (unchanged behaviour)."""
     s = get_settings()
-    if (s.video_provider == "google" and not s.media_provider_is_mock("video")
+    if (s.video_provider == "google" and not s.mock_mode and runtime.key("google", s.video_api_key)
             and not _paid_media_blocked()):
         from app.providers.media.google_video import GoogleVideoProvider
 
         return GoogleVideoProvider()
     if s.mock_mode:
         return None
+    if s.max_ai_video_ratio <= 0:
+        return None
     raise ProviderError("실사용 영상 공급자(Google/Veo)와 API 키를 설정하세요", "AUTH_ERROR")
 
 
 def get_tts_provider():
     s = get_settings()
-    if (s.tts_provider == "elevenlabs" and not s.media_provider_is_mock("tts")
+    if (s.tts_provider == "elevenlabs" and not s.mock_mode and runtime.key("elevenlabs", s.tts_api_key)
             and not _paid_media_blocked()):
         from app.providers.media.elevenlabs_tts import ElevenLabsTTSProvider
 

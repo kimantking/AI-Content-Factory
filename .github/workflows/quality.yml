@@ -73,6 +73,11 @@ jobs:
       - name: Pipeline, real MP4 render, playback metadata and deletion
         run: >-
           python -m pytest -q
+          backend/tests/test_runtime_media_credentials.py
+          backend/tests/test_task_media_handoff.py
+          backend/tests/phase11/test_credential_vault.py
+          backend/tests/phase11/test_elevenlabs_provider.py
+          backend/tests/phase11/test_google_provider.py
           backend/tests/test_providers.py
           backend/tests/test_pipeline_integration.py
           backend/tests/phase9/test_smoke.py

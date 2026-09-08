@@ -16,6 +16,7 @@ import base64
 import time
 
 from app.config import get_settings
+from app.providers.media import runtime
 from app.providers.media._http import http_bytes, http_json, provider_error
 from app.providers.media.base import MediaResult
 from app.schemas.media import ProviderMode
@@ -27,7 +28,7 @@ class GoogleVideoProvider:
 
     def __init__(self) -> None:
         s = get_settings()
-        self._key = s.google_api_key or s.video_api_key
+        self._key = runtime.key("google", s.video_api_key)
         self._base = s.google_api_base.rstrip("/")
         self._model = s.google_video_model
         self._timeout = s.google_timeout_seconds

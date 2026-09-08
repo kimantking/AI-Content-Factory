@@ -23,3 +23,6 @@ matplotlib==3.10.0
 cryptography==44.0.0
 pytest==8.3.4
 pytest-asyncio==0.25.0
+
+# Apache-2.0 article extraction: https://github.com/adbar/trafilatura
+trafilatura==2.0.0

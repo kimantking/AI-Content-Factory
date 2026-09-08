@@ -15,6 +15,7 @@ import base64
 import wave
 
 from app.config import get_settings
+from app.providers.media import runtime
 from app.providers.media._http import http_json, provider_error
 from app.providers.media.base import MediaResult
 from app.schemas.media import ProviderMode
@@ -28,17 +29,24 @@ class ElevenLabsTTSProvider:
 
     def __init__(self) -> None:
         s = get_settings()
-        self._key = s.elevenlabs_api_key or s.tts_api_key
+        self._key = runtime.key("elevenlabs", s.tts_api_key)
         self._base = s.elevenlabs_api_base.rstrip("/")
         self._model = s.elevenlabs_model
-        self._default_voice = s.elevenlabs_voice_id
+        self._default_voice = runtime.voice()
         self._timeout = s.elevenlabs_timeout_seconds
         if not self._key:
             raise provider_error("elevenlabs", "NOT_CONFIGURED", "ELEVENLABS_API_KEY is not set")
 
+    def validate_configuration(self):
+        if not self._default_voice:
+            raise provider_error(
+                "elevenlabs", "NOT_CONFIGURED",
+                "AI 연결 설정에서 목소리를 선택하거나 ELEVENLABS_VOICE_ID를 설정하세요",
+            )
+
     def synthesize(self, *, text: str, voice_id: str, language: str, speed: float,
                    emotion: str, style: str, out_path: str) -> MediaResult:
-        voice = self._default_voice or voice_id
+        voice = voice_id or self._default_voice
         if not voice:
             raise provider_error("elevenlabs", "NOT_CONFIGURED",
                                  "ELEVENLABS_VOICE_ID is not set and no voice_id was provided")

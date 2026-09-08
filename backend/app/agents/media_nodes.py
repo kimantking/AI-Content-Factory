@@ -232,7 +232,7 @@ def platform_adapt_node(state: MediaState) -> dict:
         camp = session.get(Campaign, cid)
         if camp:
             camp.current_step = "media:platform_adapt"
-            session.flush()
+            session.commit()
         existing = {c.platform: c for c in
                     session.query(PlatformContent).filter_by(campaign_id=cid).all()}
         for pkey in state["requested_platforms"]:
@@ -532,7 +532,7 @@ def gen_voice_node(state: MediaState) -> dict:
             else:
                 check_media_budget(session, cid)
                 out_path = os.path.join(audio_dir, f"scene_{sc['scene_order']:03d}.wav")
-                res = tts.synthesize(text=sc["narration"], voice_id="ko-narrator-1",
+                res = tts.synthesize(text=sc["narration"], voice_id="",
                                      language="ko", speed=1.0, emotion="neutral",
                                      style=content.voice_style or "NARRATION", out_path=out_path)
                 log_cost(session, campaign_id=cid, agent_name="Voice Director", kind="TTS",
