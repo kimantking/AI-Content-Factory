@@ -72,6 +72,7 @@ export default function Home() {
 
   // composer
   const [topic, setTopic] = useState("");
+  const [productionPrompt, setProductionPrompt] = useState("");
   const [wsId, setWsId] = useState("");
   const [platforms, setPlatforms] = useState<string[]>(["YouTube"]);
   const [goal, setGoal] = useState("Balanced");
@@ -185,6 +186,7 @@ export default function Home() {
     setErr(null);
     try {
       const r = await composeCampaign({
+        production_prompt: productionPrompt.trim(),
         topic: topic.trim() || undefined,
         execution_mode: mode === "LEARN_ONLY" ? "LEARN_ONLY"
           : mode === "DRAFT_ONLY" ? "CREATE_ONLY" : "CREATE_AND_LEARN",
@@ -259,6 +261,14 @@ export default function Home() {
             </div>
           </div>
 
+      <section className="rounded-lg border border-hairline bg-surface-1 p-4">
+        <label htmlFor="production-prompt" className="text-sm font-bold">제작 프롬프트 (선택)</label>
+        <textarea id="production-prompt" rows={4} maxLength={12000}
+          className="mt-2 w-full rounded-lg border border-hairline bg-transparent px-3 py-2"
+          value={productionPrompt} onChange={(e) => setProductionPrompt(e.target.value)}
+          placeholder="예: 한국어 30초 웹툰 스타일. 등장인물 외형 유지, 따뜻한 말투, 결말은 다음 화를 기대하게 해줘." />
+        <p className="text-xs text-ink-subtle">주제와 별도로 저장하며 대본·장면 제작 요청에 반영합니다. {productionPrompt.length}/12,000자</p>
+      </section>
           <div className="grid gap-5 p-4 sm:p-5 md:grid-cols-2">
             <div>
               <p className="text-caption font-medium text-ink-subtle">플랫폼</p>

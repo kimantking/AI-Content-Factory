@@ -23,6 +23,7 @@ const CYCLE_LABEL: Record<string, string> = {
 export default function ComposePage() {
   const [wsId, setWsId] = useState("");
   const [topic, setTopic] = useState("");
+  const [productionPrompt, setProductionPrompt] = useState("");
   const [urls, setUrls] = useState<string[]>([""]);
   const [mode, setMode] = useState<string>("CREATE_AND_LEARN");
   const [cts, setCts] = useState<Record<string, string[]>>({});
@@ -76,6 +77,7 @@ export default function ComposePage() {
     try {
       const presetName = (result as { preset?: string } | null)?.preset;
       const body = {
+        production_prompt: productionPrompt.trim(),
         topic: topic.trim() || undefined,
         execution_mode: mode,
         reference_urls: urls.map((u) => u.trim()).filter(Boolean),
@@ -96,6 +98,14 @@ export default function ComposePage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold">캠페인 만들기</h1>
 
+      <section className="rounded-lg border border-hairline bg-surface-1 p-4">
+        <label htmlFor="production-prompt" className="text-sm font-bold">제작 프롬프트 (선택)</label>
+        <textarea id="production-prompt" rows={4} maxLength={12000}
+          className="mt-2 w-full rounded-lg border border-hairline bg-transparent px-3 py-2"
+          value={productionPrompt} onChange={(e) => setProductionPrompt(e.target.value)}
+          placeholder="예: 한국어 30초 웹툰 스타일. 등장인물 외형 유지, 따뜻한 말투, 결말은 다음 화를 기대하게 해줘." />
+        <p className="text-xs text-ink-subtle">주제와 별도로 저장하며 대본·장면 제작 요청에 반영합니다. {productionPrompt.length}/12,000자</p>
+      </section>
       <section className="rounded-lg border border-hairline bg-surface-1 p-5">
         <label className="text-sm font-bold">오늘의 주제</label>
         <input
