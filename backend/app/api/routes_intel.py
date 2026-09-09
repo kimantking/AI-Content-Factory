@@ -421,6 +421,9 @@ def compose_campaign(payload: dict = Body(...), db: Session = Depends(get_db)):
     mode = resolve_execution_mode(payload.get("execution_mode", "CREATE_AND_LEARN"))
     topic = (payload.get("topic") or "").strip()
     production_prompt = payload.get("production_prompt") or ""
+    video_mode = payload.get("video_mode", "IMAGE_MOTION")
+    if video_mode not in ("IMAGE_MOTION", "VEO"):
+        raise HTTPException(400, "영상 제작 방식이 올바르지 않습니다.")
     if not isinstance(production_prompt, str) or len(production_prompt) > 12000:
         raise HTTPException(400, "제작 프롬프트는 12,000자 이하의 텍스트여야 합니다.")
     urls = payload.get("reference_urls") or []
@@ -433,7 +436,11 @@ def compose_campaign(payload: dict = Body(...), db: Session = Depends(get_db)):
 
     campaign_id = None
     if not is_learn_only(mode):
+        from app.providers.media.preflight import validate_media_setup
+        from app.providers.errors import ProviderError
+
         camp = Campaign(topic=topic, production_prompt=production_prompt.strip(),
+                        video_mode=video_mode,
                         audience_goal=(payload.get("audience_goal") or "BALANCED").upper(),
                         platforms=[], status="WAITING", workspace_id=ws, brand_id=br, channel_id=ch,
                         execution_mode=mode.value)
@@ -445,6 +452,13 @@ def compose_campaign(payload: dict = Body(...), db: Session = Depends(get_db)):
             sel = apply_preset(payload["preset"], db, workspace_id=ws)
         set_selection(db, campaign_id=campaign_id, selection=sel or {}, workspace_id=ws,
                       brand_id=br, channel_id=ch, source="USER", user_explicit=True)
+        from app.platforms import ContentFamily, get_platform
+
+        if any(get_platform(p).family == ContentFamily.VIDEO for p in camp.platforms):
+            try:
+                validate_media_setup(ws, video_mode)
+            except ProviderError as exc:
+                raise HTTPException(400, str(exc)) from exc
 
     learning = {"job_id": None}
     if urls and mode.value != "CREATE_ONLY":

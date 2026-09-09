@@ -388,6 +388,7 @@ def visual_direct_node(state: MediaState) -> dict:
     s = get_settings()
     scenes = state["scenes"]
     with session_scope() as session:
+        video_mode = session.get(Campaign, cid).video_mode
         try:
             check_media_budget(session, cid)
         except Exception:
@@ -398,13 +399,16 @@ def visual_direct_node(state: MediaState) -> dict:
             remaining = max(0.0, s.media_budget_usd - media_spend(session, cid))
         choices = plan_visuals(
             scenes,
-            max_ai_video_ratio=s.max_ai_video_ratio,
-            video_provider_available=get_video_provider() is not None,
+            max_ai_video_ratio=0 if video_mode == "IMAGE_MOTION" else s.max_ai_video_ratio,
+            video_provider_available=video_mode != "IMAGE_MOTION" and get_video_provider() is not None,
             stock_provider_available=get_stock_provider() is not None,
             remaining_budget_usd=remaining,
         )
         updated = []
         for sc, ch in zip(scenes, choices):
+            if video_mode == "VEO" and ch.visual_type in (VisualType.AI_IMAGE, VisualType.STOCK_VIDEO):
+                ch.visual_type = VisualType.AI_VIDEO
+                ch.reason = "사용자가 Google Veo 장면 생성을 선택함"
             row = session.get(Scene, sc["id"])
             row.visual_type = ch.visual_type
             if row.motion_effect != "manual":          # respect a hand-set / regenerated motion
