@@ -9,13 +9,25 @@ export async function chatWithAgent(
   history: AgentChatMessage[],
   campaignContext?: Record<string, unknown>,
 ) {
-  const r = await fetch(`${API_BASE}/api/agents/${agentId}/chat`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ message, history, campaign_context: campaignContext }),
-  });
-  if (!r.ok) throw new Error(`agent chat failed: ${r.status}`);
-  return r.json() as Promise<{ reply: string; provider: string; model: string; mock: boolean }>;
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 120000);
+  try {
+    const r = await fetch(`${API_BASE}/api/agents/${agentId}/chat`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ message, history, campaign_context: campaignContext }),
+      signal: controller.signal,
+    });
+    if (!r.ok) throw new Error(`AI 연결에 실패했습니다 (${r.status}). AI 설정을 확인하고 다시 시도해 주세요.`);
+    const result = await r.json() as { reply: string; provider: string; model: string; mock: boolean; error?: string };
+    if (result.error || !result.reply?.trim()) throw new Error("AI가 답변을 생성하지 못했습니다. 연결된 모델과 API 설정을 확인해 주세요.");
+    return result;
+  } catch (error) {
+    if (controller.signal.aborted) throw new Error("응답 대기 시간이 초과됐습니다. 잠시 후 다시 시도해 주세요.");
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export type StepStatus = { name: string; status: string };
