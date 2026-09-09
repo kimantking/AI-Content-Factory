@@ -117,12 +117,20 @@ body::before {
     linear-gradient(90deg, transparent 0 74%, rgb(var(--primary) / 0.025) 74% 74.1%, transparent 74.1%),
     radial-gradient(80% 60% at 74% -10%, rgb(var(--primary) / 0.13), transparent 58%);
 }
-  :root[data-theme="light"] body::before {
-  opacity: .9;
+:root[data-theme="light"] body::before {
   background:
-    linear-gradient(to bottom, rgb(255 232 242 / .34), rgb(247 208 227 / .52)),
-    url('/studio-clouds.png') center top / cover fixed no-repeat;
+    radial-gradient(ellipse at 52% 10%, #fffbece6, transparent 60%),
+    linear-gradient(180deg, #f8e7eeaa, #e5def2aa),
+    url('/studio-clouds.png') center / cover no-repeat;
 }
+.studio-sky {
+  background:
+    radial-gradient(ellipse at 50% 0%, #fffdebe6, transparent 65%),
+    linear-gradient(180deg, #faedf399, #e9e4f3bb),
+    url('/studio-clouds.png') center / cover no-repeat;
+}
+.agent-person { box-shadow: 0 10px 35px -18px #88647b66; }
+:root[data-theme="light"] .card { box-shadow: 0 8px 30px -22px #88647b55; }
 body > * { position: relative; z-index: 1; }
 
 ::selection {

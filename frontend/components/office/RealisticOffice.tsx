@@ -2,85 +2,45 @@
 
 import { AGENTS, STATE_META, type AgentId, type OfficeModel } from "./office-data";
 
-const POSITIONS: Record<AgentId, { left: string; top: string; delay: string }> = {
-  research: { left: "17%", top: "64%", delay: "0s" },
-  script: { left: "33%", top: "54%", delay: "-.7s" },
-  video: { left: "68%", top: "54%", delay: "-1.3s" },
-  publish: { left: "83%", top: "64%", delay: "-1.9s" },
-};
-
-const PORTRAITS: Record<AgentId, string> = {
-  research: "/agent-research.webp",
-  script: "/agent-script.webp",
-  video: "/agent-video.webp",
-  publish: "/agent-publish.webp",
-};
-
-export function RealisticOffice({
-  model,
-  selected,
-  onSelect,
-  reducedMotion,
-}: {
+export function RealisticOffice({ model, selected, onSelect }: {
   model: OfficeModel;
   selected: AgentId | null;
   onSelect: (id: AgentId | null) => void;
   reducedMotion: boolean;
 }) {
   return (
-    <div className="relative h-full w-full overflow-hidden bg-[#f5d7e5]">
-      <div
-        role="img"
-        aria-label="통창과 파스텔 핑크 조명이 있는 실제 사무실"
-        className="absolute inset-0 z-0 bg-cover bg-center bg-no-repeat"
-        style={{ backgroundImage: "url('/studio-office-real.webp')" }}
-      />
-      <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-b from-white/5 via-transparent to-[#351d2a]/20" />
-
-      {AGENTS.map((agent) => {
-        const state = model.stations[agent.id];
-        const meta = STATE_META[state];
-        const pos = POSITIONS[agent.id];
-        const active = state === "RUNNING";
-        const chosen = selected === agent.id;
-        return (
-          <button
-            key={agent.id}
-            type="button"
-            aria-label={`${agent.name} · ${meta.ko}`}
-            aria-pressed={chosen}
-            onClick={() => onSelect(chosen ? null : agent.id)}
-            className={`group absolute z-10 -translate-x-1/2 -translate-y-1/2 text-center outline-none ${
-              reducedMotion ? "" : "office-agent"
-            }`}
-            style={{ left: pos.left, top: pos.top, animationDelay: pos.delay }}
-          >
-            <span className={`relative mx-auto block w-[70px] sm:w-[96px] lg:w-[112px] ${active && !reducedMotion ? "agent-working" : ""}`}>
-              <span
-                className="absolute inset-1 rounded-full blur-xl"
-                style={{ background: meta.hex, opacity: active ? 0.62 : 0.2 }}
-              />
-              <img src={PORTRAITS[agent.id]} alt="" className="relative block w-full drop-shadow-[0_10px_10px_rgba(30,12,24,.34)]" draggable={false} />
-              <span
-                className="absolute right-0 top-0 h-3 w-3 rounded-full border-2 border-white shadow"
-                style={{ background: meta.hex }}
-              />
-            </span>
-            <span className={`mt-1.5 inline-flex rounded-md border px-2 py-1 backdrop-blur-md transition ${
-              chosen ? "border-primary bg-primary text-white" : "border-white/60 bg-white/75 text-[#4b3342] group-hover:bg-white"
-            }`}>
-              <span className="text-[11px] font-semibold sm:text-xs">{agent.name} · {meta.ko}</span>
-            </span>
-          </button>
-        );
-      })}
-
-      <style jsx>{`
-        .office-agent { animation: float-agent 3.4s ease-in-out infinite; }
-        .agent-working { animation: type-agent .42s steps(2, end) infinite; }
-        @keyframes float-agent { 0%, 100% { margin-top: 0; } 50% { margin-top: -7px; } }
-        @keyframes type-agent { 0%, 100% { transform: translateX(-1px) rotate(-1deg); } 50% { transform: translateX(1px) rotate(1deg); } }
-      `}</style>
+    <div className="studio-sky h-full overflow-auto px-4 pb-6 pt-8 sm:px-8 sm:pt-10">
+      <div className="mx-auto max-w-5xl">
+        <p className="text-xs font-semibold tracking-[.18em] text-[#88647b]">나의 AI 제작팀</p>
+        <h2 className="mt-2 text-2xl font-semibold tracking-tight text-[#392d43] sm:text-3xl">좋은 이야기를, 함께 만들어요.</h2>
+        <p className="mt-2 text-sm text-[#6e5a72]">담당 에이전트를 선택해 아이디어와 제작 방향을 이야기하세요.</p>
+        <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-4">
+          {AGENTS.map((agent) => {
+            const meta = STATE_META[model.stations[agent.id]];
+            const chosen = selected === agent.id;
+            return (
+              <button key={agent.id} type="button" aria-pressed={chosen}
+                aria-label={`${agent.name}, ${meta.ko}, 대화 열기`}
+                onClick={() => onSelect(chosen ? null : agent.id)}
+                className={`agent-person group relative overflow-hidden rounded-2xl border bg-white/75 text-left transition hover:-translate-y-1 hover:bg-white/95 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#956182] ${chosen ? "border-[#956182]" : "border-white/90"}`}>
+                <div className="relative h-32 overflow-hidden bg-gradient-to-br from-[#fff8ee] via-[#fae7ee] to-[#dedff1] sm:h-44 lg:h-56">
+                  <img src={`/agent-${agent.id}.webp`} alt="" draggable={false}
+                    className="absolute left-1/2 top-1 w-[90%] max-w-none -translate-x-1/2" />
+                  <span className="absolute bottom-2 left-2 inline-flex items-center gap-1.5 rounded-full bg-white/95 px-2.5 py-1 text-[11px] text-[#49384e]">
+                    <span className="h-1.5 w-1.5 rounded-full" style={{ background: meta.hex }} />{meta.ko}
+                  </span>
+                </div>
+                <div className="p-3 sm:p-4">
+                  <h3 className="text-sm font-semibold text-[#392d43] sm:text-base">{agent.name}</h3>
+                  <p className="mt-1 text-[11px] text-[#79667f] sm:text-xs">{agent.role}</p>
+                  <span className="mt-3 flex items-center justify-between border-t border-[#eadde6] pt-3 text-xs font-semibold text-[#915573]">대화하기 <span aria-hidden="true">↗</span></span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+        <p className="mt-4 text-xs text-[#79667f]">AI 에이전트 · 작업 상태는 연결된 제작 파이프라인을 기준으로 표시됩니다.</p>
+      </div>
     </div>
   );
 }
