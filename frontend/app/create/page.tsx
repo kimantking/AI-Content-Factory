@@ -25,6 +25,7 @@ export default function QuickCreate() {
   const [wsId, setWsId] = useState("");
   const [topic, setTopic] = useState("");
   const [productionPrompt, setProductionPrompt] = useState("");
+  const [videoMode, setVideoMode] = useState<"IMAGE_MOTION" | "VEO">("IMAGE_MOTION");
   const [urls, setUrls] = useState<string[]>([""]);
   const [mode, setMode] = useState("CREATE_AND_LEARN");
   const [quality, setQuality] = useState("balanced");
@@ -83,6 +84,7 @@ export default function QuickCreate() {
     try {
       const r = await composeCampaign({
         production_prompt: productionPrompt.trim(),
+        video_mode: videoMode,
         topic: cleanTopic || undefined, execution_mode: mode,
         reference_urls: urls.map((u) => u.trim()).filter(Boolean),
         platform_selection: sel, workspace_id: wsId || undefined,
@@ -102,6 +104,13 @@ export default function QuickCreate() {
         placeholder="주제: AI 때문에 바뀌는 직업 5가지" value={topic} onChange={(e) => setTopic(e.target.value)} />
 
       <section className="rounded-lg border border-hairline bg-surface-1 p-4">
+        <label htmlFor="video-mode" className="text-sm font-bold">영상 제작 방식</label>
+        <select id="video-mode" value={videoMode} onChange={(e) => setVideoMode(e.target.value as "IMAGE_MOTION" | "VEO")}
+          className="mb-3 mt-2 block w-full rounded border border-hairline bg-surface-1 p-2">
+          <option value="IMAGE_MOTION">이미지에 움직임 적용 + 음성·자막</option>
+          <option value="VEO">Google Veo 장면 생성 + 음성·자막 (유료)</option>
+        </select>
+        {videoMode === "VEO" && <p className="mb-3 text-xs">장면별 생성 비용이 발생합니다. 현재 실제 비용·잔여 할당량을 자동 확인하지 못합니다.</p>}
         <label htmlFor="production-prompt" className="text-sm font-bold">제작 프롬프트 (선택)</label>
         <textarea id="production-prompt" rows={4} maxLength={12000}
           className="mt-2 w-full rounded-lg border border-hairline bg-transparent px-3 py-2"

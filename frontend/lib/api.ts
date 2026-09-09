@@ -889,7 +889,7 @@ export const getPlatformSelection = (campaignId: string): Promise<{ campaign_id:
 export const setPlatformSelection = (body: { campaign_id: string; selection?: PlatformSelection; preset?: string }) =>
   jpost("/api/platform-selection", body);
 export const composeCampaign = (body: {
-  topic?: string; production_prompt?: string; execution_mode: string; reference_urls?: string[];
+  topic?: string; production_prompt?: string; video_mode?: "IMAGE_MOTION" | "VEO"; execution_mode: string; reference_urls?: string[];
   platform_selection?: PlatformSelection; preset?: string; workspace_id?: string; audience_goal?: string;
 }): Promise<{ execution_mode: string; campaign_id: string | null; pipeline_started: boolean; generate_platforms: string[]; learning: Record<string, unknown> }> =>
   jpost("/api/campaigns/compose", body);
