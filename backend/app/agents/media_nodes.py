@@ -627,6 +627,52 @@ def edit_decision_node(state: MediaState) -> dict:
     return {"scenes": updated}
 
 
+def gen_videos_node(state: MediaState) -> dict:
+    """Generate selected AI_VIDEO scenes; persist each completed clip for retries."""
+    updated = []
+    cid = state["campaign_id"]
+    provider = None
+    for sc in state["scenes"]:
+        if sc.get("visual_type") != VisualType.AI_VIDEO:
+            updated.append(sc)
+            continue
+        with session_scope() as session:
+            content = session.get(PlatformContent, state["content_id"])
+            spec = get_platform(content.platform)
+            existing = _existing_scene_asset(session, sc["id"], "video")
+            if existing:
+                updated.append({**sc, "video_path": existing.storage_path})
+                continue
+            session.get(Campaign, cid).current_step = "media:videos"
+            session.commit()
+            check_media_budget(session, cid, pending_usd=0.0)
+            provider = provider or get_video_provider()
+            if provider is None:
+                raise ProviderError("AI_VIDEO 장면에 영상 공급자가 없습니다", "AUTH_ERROR")
+            w, h = spec.resolution()
+            folder = get_storage().campaign_dir(cid, spec.storage_dir, "videos")
+            path = os.path.join(folder, f"scene_{sc['scene_order']:03d}.mp4")
+            result = provider.generate_video(
+                prompt=_prompt_text(sc), reference_image=sc.get("still_path"),
+                duration=sc["estimated_duration"], width=w, height=h,
+                camera_motion=sc.get("camera_motion", ""), out_path=path)
+            from app.media.ffmpeg import probe
+
+            info = probe(path)
+            if not info.get("has_video") or info.get("duration", 0) <= 0:
+                raise ProviderError("생성된 영상 파일이 손상되었거나 비어 있습니다", "INVALID_OUTPUT")
+            _record_asset(session, cid=cid, content_id=content.id, scene_id=sc["id"],
+                          asset_type="video", provider=result.provider, mode=result.provider_mode.value,
+                          prompt=_prompt_text(sc), path=path, mime="video/mp4",
+                          width=info.get("width"), height=info.get("height"),
+                          duration=info["duration"], cost=result.cost, meta=result.meta)
+            log_cost(session, campaign_id=cid, agent_name="Video Agent", kind="VIDEO",
+                     provider=result.provider, amount_usd=result.cost)
+            session.get(Scene, sc["id"]).generation_provider = result.provider
+            updated.append({**sc, "video_path": path})
+    return {"scenes": updated}
+
+
 def render_node(state: MediaState) -> dict:
     cid = state["campaign_id"]
     content_id = state["content_id"]
@@ -643,7 +689,14 @@ def render_node(state: MediaState) -> dict:
         render_scenes: list[RenderScene] = []
         for sc in scenes:
             clip = os.path.join(clips_dir, f"scene_{sc['scene_order']:03d}.mp4")
-            if not stg.exists(clip):
+            if sc.get("video_path"):
+                from app.media.ffmpeg import run_ffmpeg
+
+                run_ffmpeg(["-stream_loop", "-1", "-i", sc["video_path"],
+                            "-t", str(sc["estimated_duration"]), "-an",
+                            "-vf", f"scale={w}:{h}:force_original_aspect_ratio=decrease,pad={w}:{h}:(ow-iw)/2:(oh-ih)/2,setsar=1,fps={s.render_fps}",
+                            "-c:v", "libx264", "-preset", "veryfast", "-pix_fmt", "yuv420p", clip])
+            elif not stg.exists(clip):
                 render_scene_clip(sc["still_path"], clip, duration=sc["estimated_duration"],
                                   width=w, height=h, fps=s.render_fps,
                                   motion=sc.get("camera_motion", "SLOW_ZOOM_IN"))
@@ -909,6 +962,8 @@ def persist_media_node(state: MediaState) -> dict:
         if state.get("render_path") and stg.exists(state["render_path"]):
             dst = stg.output_dir(cid, spec.storage_dir, "final.mp4")
             shutil.copyfile(state["render_path"], dst)
+        elif spec.family == ContentFamily.VIDEO:
+            raise ProviderError("최종 MP4 파일이 없어 제작 완료로 처리할 수 없습니다", "INVALID_OUTPUT")
         for a in session.query(Asset).filter_by(campaign_id=cid).all():
             if a.asset_type in ("thumbnail", "image", "carousel", "subtitle") and stg.exists(a.storage_path):
                 sub = get_platform(

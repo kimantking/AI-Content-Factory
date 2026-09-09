@@ -75,6 +75,8 @@ jobs:
           python -m pytest -q
           backend/tests/test_production_references.py
           backend/tests/intel/test_learning_outcomes.py
+          backend/tests/media/test_video_provider_path.py
+          backend/tests/media/test_live_qa.py
           backend/tests/test_runtime_media_credentials.py
           backend/tests/test_task_media_handoff.py
           backend/tests/phase11/test_credential_vault.py::test_db_key_overrides_env

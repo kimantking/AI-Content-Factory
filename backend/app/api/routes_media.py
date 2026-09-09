@@ -16,7 +16,7 @@ router = APIRouter(prefix="/api", tags=["media"])
 
 MEDIA_STEPS = [
     "media:load_inputs", "media:platform_adapt", "media:scene_plan", "media:visual_direct",
-    "media:images", "media:voice", "media:subtitles", "media:edit_decision",
+    "media:images", "media:videos", "media:voice", "media:subtitles", "media:edit_decision",
     "media:render", "media:thumbnail", "media:platform_images", "media:qa", "media:done",
 ]
 _ORDER = {s: i for i, s in enumerate(MEDIA_STEPS)}
@@ -144,7 +144,7 @@ def media_status(campaign_id: str, db: Session = Depends(get_db)):
     return {
         "campaign_id": campaign_id,
         "media_status": (
-            "SUCCESS" if step == "media:done"
+            camp.status if step == "media:done"
             else "RUNNING" if step == "media:queued"
             else camp.status if step.startswith("media")
             else "PENDING"

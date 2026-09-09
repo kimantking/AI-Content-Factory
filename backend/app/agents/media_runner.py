@@ -40,10 +40,14 @@ def run_media_pipeline(campaign_id: str, platforms: list[str] | None = None,
         workspace_id = camp.workspace_id
     with media_workspace(workspace_id), _checkpointer() as cp:
         if not get_settings().mock_mode:
-            from app.providers.media.registry import get_tts_provider
+            from app.providers.media.registry import get_image_provider, get_tts_provider, get_video_provider
+            from app.media.ffmpeg import run_ffmpeg
 
+            get_image_provider()
+            get_video_provider()
             tts = get_tts_provider()
             tts.validate_configuration()
+            run_ffmpeg(["-version"], timeout=15)
         graph = build_media_graph(checkpointer=cp)
         cfg = _config(campaign_id)
         if resume and graph.get_state(cfg).next:
