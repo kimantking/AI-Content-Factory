@@ -65,6 +65,15 @@ def check_render(path: str, *, expect_duration: float, expect_w: int, expect_h: 
             "resolution_ok", "aspect_ratio_ok", "scenes_present",
         )
     )
+    from app.config import get_settings
+
+    if not get_settings().mock_mode:
+        # The synthetic test voice is deliberately quiet. Real production must
+        # not accept a silent, subtitle-free or black video as complete.
+        hard_fail = hard_fail or not all(checks[k] for k in (
+            "has_audio_stream", "audio_not_fully_silent", "subtitle_coverage_ok",
+            "no_excess_black", "fps_ok",
+        ))
     return MediaQAReport(
         passed=not hard_fail,
         checks=checks,
