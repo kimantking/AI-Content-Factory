@@ -34,7 +34,7 @@ class GoogleVideoProvider:
         s = get_settings()
         self._key = runtime.key("google", s.video_api_key)
         self._base = s.google_api_base.rstrip("/")
-        self._model = s.google_video_model
+        self._model = s.google_video_model.removeprefix("models/")
         self._timeout = s.google_timeout_seconds
         self._max_wait = int(getattr(s, "google_video_max_wait_seconds", 600))
         self._poll = int(getattr(s, "google_video_poll_seconds", 10))

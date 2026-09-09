@@ -8,6 +8,9 @@ is present, so in practice it always has one.
 from __future__ import annotations
 
 import base64
+import io
+
+from PIL import Image, ImageOps
 
 from app.config import get_settings
 from app.providers.media import runtime
@@ -24,6 +27,7 @@ _RATIOS = {(1, 1): "1:1", (9, 16): "9:16", (16, 9): "16:9", (3, 4): "3:4", (4, 3
 
 
 def _effective_model(configured: str) -> str:
+    configured = configured.removeprefix("models/")
     return _CURRENT_IMAGE_MODEL if configured.startswith("imagen-") else configured
 
 
@@ -34,7 +38,11 @@ def _image_part(data: dict) -> tuple[bytes, str]:
         inline = part.get("inlineData") or part.get("inline_data") or {}
         encoded = inline.get("data")
         if encoded:
-            return base64.b64decode(encoded), inline.get("mimeType") or inline.get("mime_type") or "image/png"
+            try:
+                decoded = base64.b64decode(encoded, validate=True)
+            except (ValueError, TypeError) as exc:
+                raise provider_error("google", "PROVIDER_ERROR", "invalid image encoding") from exc
+            return decoded, inline.get("mimeType") or inline.get("mime_type") or "image/png"
     raise provider_error("google", "PROVIDER_ERROR", "no image in response")
 
 
@@ -80,8 +88,13 @@ class GoogleImageProvider:
 
         data = http_json(url, method="POST", body=payload, timeout=self._timeout, vendor="google")
         img_bytes, mime = _image_part(data)
-        with open(out_path, "wb") as f:
-            f.write(img_bytes)
+        try:
+            with Image.open(io.BytesIO(img_bytes)) as image:
+                image.load()
+                ImageOps.fit(image.convert("RGB"), (width, height)).save(out_path, "PNG")
+        except (OSError, ValueError) as exc:
+            raise provider_error("google", "PROVIDER_ERROR", "생성된 이미지가 손상되어 읽을 수 없습니다") from exc
+        mime = "image/png"
 
         return MediaResult(
             path=out_path, mime_type=mime, provider=self.name, provider_mode=self.mode,

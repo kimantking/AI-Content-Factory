@@ -11,7 +11,12 @@ from app.providers.errors import ProviderError
 
 pytestmark = [pytest.mark.phase11]
 
-_PNG = base64.b64encode(b"\x89PNG\r\n\x1a\n" + b"0" * 64).decode()
+import io
+from PIL import Image
+
+_png_buffer = io.BytesIO()
+Image.new("RGB", (8, 8), "green").save(_png_buffer, "PNG")
+_PNG = base64.b64encode(_png_buffer.getvalue()).decode()
 
 
 @pytest.fixture
@@ -77,6 +82,19 @@ def test_google_image_happy_path(google_on, monkeypatch, tmp_path):
     assert "generativelanguage.googleapis.com" in captured["url"]
     import os
     assert os.path.getsize(out) > 0
+    with Image.open(out) as image:
+        assert image.size == (1920, 1080)
+        assert image.format == "PNG"
+
+
+def test_google_rejects_corrupt_image(google_on, monkeypatch, tmp_path):
+    from app.providers.media import google_image as gi
+    monkeypatch.setattr(gi, "http_json", lambda *args, **kwargs: {
+        "candidates": [{"content": {"parts": [{"inlineData": {
+            "data": base64.b64encode(b"not an image").decode(), "mimeType": "image/png"}}]}}]})
+    with pytest.raises(ProviderError, match="손상"):
+        gi.GoogleImageProvider().generate_image(prompt="x", negative_prompt="", width=8, height=8,
+                                                out_path=str(tmp_path / "bad.png"))
 
 
 @pytest.mark.parametrize("aspect,w,h", [("1:1", 512, 512), ("9:16", 1080, 1920),

@@ -64,16 +64,20 @@ class ElevenLabsTTSProvider:
         b64 = data.get("audio_base64")
         if not b64:
             raise provider_error("elevenlabs", "PROVIDER_ERROR", "no audio in response")
-        pcm = base64.b64decode(b64)
+        try:
+            pcm = base64.b64decode(b64, validate=True)
+            if not pcm or len(pcm) % 2:
+                raise ValueError("invalid PCM frame size")
+        except (ValueError, TypeError) as exc:
+            raise provider_error("elevenlabs", "PROVIDER_ERROR", "생성된 음성 데이터가 손상되었습니다") from exc
         with wave.open(out_path, "wb") as w:
             w.setnchannels(1)
             w.setsampwidth(2)
             w.setframerate(_SR)
             w.writeframes(pcm)
 
-        align = data.get("alignment") or {}
-        ends = align.get("character_end_times_seconds") or []
-        duration = round(float(ends[-1]), 3) if ends else round(len(pcm) / (2 * _SR), 3)
+        # Actual WAV duration includes trailing audio after the last character.
+        duration = round(len(pcm) / (2 * _SR), 3)
 
         return MediaResult(
             path=out_path, mime_type="audio/wav", provider=self.name, provider_mode=self.mode,

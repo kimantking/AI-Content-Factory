@@ -456,7 +456,7 @@ def compose_campaign(payload: dict = Body(...), db: Session = Depends(get_db)):
 
         if any(get_platform(p).family == ContentFamily.VIDEO for p in camp.platforms):
             try:
-                validate_media_setup(ws, video_mode)
+                validate_media_setup(ws, video_mode, verify_remote=True)
             except ProviderError as exc:
                 raise HTTPException(400, str(exc)) from exc
 

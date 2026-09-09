@@ -16,6 +16,15 @@ pytestmark = [pytest.mark.phase11]
 _PCM = b"\x00\x01" * 24000            # 1 s of 24 kHz mono 16-bit
 
 
+@pytest.mark.parametrize("encoded", ["!!!!", base64.b64encode(b"x").decode()])
+def test_corrupt_audio_rejected(eleven_on, monkeypatch, tmp_path, encoded):
+    from app.providers.media import elevenlabs_tts as el
+    monkeypatch.setattr(el, "http_json", lambda *args, **kwargs: {"audio_base64": encoded})
+    with pytest.raises(ProviderError, match="손상"):
+        el.ElevenLabsTTSProvider().synthesize(text="한국어", voice_id="", language="ko", speed=1,
+                                              emotion="neutral", style="", out_path=str(tmp_path / "bad.wav"))
+
+
 @pytest.fixture
 def eleven_on(_base_settings):
     _base_settings.mock_mode = False
@@ -57,7 +66,7 @@ def test_elevenlabs_synthesize_writes_wav_with_alignment_duration(eleven_on, mon
         language="ko", speed=1.0, emotion="neutral", style="NARRATION", out_path=out)
 
     assert res.provider == "elevenlabs" and res.provider_mode.value == "REAL"
-    assert res.mime_type == "audio/wav" and res.duration == 0.97
+    assert res.mime_type == "audio/wav" and res.duration == 1.0
     assert res.cost == 0.0 and res.meta["cost_state"] == "UNKNOWN"
     assert res.meta["voice_id"] == "voice-abc"          # config voice wins
     assert seen["headers"]["xi-api-key"] == "test-11-key"
