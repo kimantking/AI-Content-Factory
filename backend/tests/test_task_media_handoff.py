@@ -3,6 +3,34 @@ from app.db.models import Campaign
 from app.tasks import _enqueue_media_after_text
 
 
+def test_text_task_retry_resumes_checkpoint(monkeypatch):
+    from app.tasks import run_campaign_task
+
+    calls = []
+    monkeypatch.setattr("app.tasks.run_pipeline", lambda *args, **kw: calls.append(kw) or {"status": "SUCCESS"})
+    monkeypatch.setattr("app.tasks._enqueue_media_after_text", lambda *args: False)
+    run_campaign_task.push_request(retries=1)
+    try:
+        run_campaign_task.run("test-id", "한국어 주제")
+    finally:
+        run_campaign_task.pop_request()
+    assert calls == [{"resume": True}]
+
+
+def test_active_step_survives_provider_failure():
+    from app.agents.common import set_step
+
+    cid = _campaign("CREATE_ONLY", status="RUNNING", step="research")
+    try:
+        with session_scope() as session:
+            set_step(session, cid, "strategize")
+            raise RuntimeError("provider failed")
+    except RuntimeError:
+        pass
+    with session_scope() as session:
+        assert session.get(Campaign, cid).current_step == "strategize"
+
+
 def _campaign(mode: str, *, step: str = "done", status: str = "SUCCESS") -> str:
     with session_scope() as session:
         camp = Campaign(

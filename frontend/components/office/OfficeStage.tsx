@@ -23,7 +23,7 @@ export function OfficeStage({ snap, overlay }: { snap: SupportSnapshot | null; o
   }, []);
 
   return (
-    <section aria-label="AI 오퍼레이션 스튜디오" className="relative -mx-4 -mt-4 sm:-mx-6 sm:-mt-6">
+    <section aria-label="AI 오퍼레이션 스튜디오" className="relative -mt-4 sm:-mt-6">
       {/* the studio is a full-bleed spatial band, not a widget */}
       <div className="relative h-[710px] sm:h-[820px] lg:h-[590px]">
         <RealisticOffice model={model} selected={selected} onSelect={setSelected} reducedMotion={reducedMotion} />

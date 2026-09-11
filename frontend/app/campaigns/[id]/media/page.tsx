@@ -3,6 +3,7 @@
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import {
   MediaStatus,
+  API_BASE,
   fileUrl,
   getMedia,
   regenerateScene,
@@ -101,7 +102,8 @@ export default function MediaPage({ params }: { params: Promise<{ id: string }> 
           ← 캠페인
         </a>
         <div className="text-right text-xs text-subtle">
-          미디어 비용 ${data.cost_total.toFixed(4)} / 한도 ${data.media_budget}
+          기록된 미디어 비용 ${data.cost_total.toFixed(4)} / 현재 기본 한도 ${data.media_budget}
+          <p>예상 단가를 포함하며 실제 청구액과 다를 수 있습니다.</p>
         </div>
       </div>
 
@@ -181,7 +183,8 @@ export default function MediaPage({ params }: { params: Promise<{ id: string }> 
 
       {data.render.video && (
         <Card title={`최종 영상 · ${data.render.width}×${data.render.height} · ${data.render.duration}s`}>
-          <video src={fileUrl(data.render.video) ?? ""} controls className="w-full rounded-lg" />
+          <video aria-label="최종 영상" src={fileUrl(data.render.video) ?? ""} controls playsInline className="mx-auto max-h-[70vh] w-full rounded-lg bg-black object-contain" />
+          <a className="btn btn-secondary mt-3" href={`${API_BASE}/api/library/${id}/media/video`}>최종 MP4 다운로드</a>
         </Card>
       )}
 

@@ -1,4 +1,5 @@
 "use client";
+import VideoGenerationChoice from "@/components/VideoGenerationChoice";
 
 import { useEffect, useMemo, useState } from "react";
 import {
@@ -25,6 +26,7 @@ export default function ComposePage() {
   const [topic, setTopic] = useState("");
   const [productionPrompt, setProductionPrompt] = useState("");
   const [videoMode, setVideoMode] = useState<"IMAGE_MOTION" | "VEO">("IMAGE_MOTION");
+  const [videoPlan, setVideoPlan] = useState<"PREVIEW" | "THREE_SCENES">("PREVIEW");
   const [urls, setUrls] = useState<string[]>([""]);
   const [mode, setMode] = useState<string>("CREATE_AND_LEARN");
   const [cts, setCts] = useState<Record<string, string[]>>({});
@@ -79,7 +81,7 @@ export default function ComposePage() {
       const presetName = (result as { preset?: string } | null)?.preset;
       const body = {
         production_prompt: productionPrompt.trim(),
-        video_mode: videoMode,
+        video_mode: videoMode, video_plan: videoMode === "VEO" ? videoPlan : undefined,
         topic: topic.trim() || undefined,
         execution_mode: mode,
         reference_urls: urls.map((u) => u.trim()).filter(Boolean),
@@ -101,13 +103,7 @@ export default function ComposePage() {
       <h1 className="text-2xl font-bold">캠페인 만들기</h1>
 
       <section className="rounded-lg border border-hairline bg-surface-1 p-4">
-        <label htmlFor="video-mode" className="text-sm font-bold">영상 제작 방식</label>
-        <select id="video-mode" value={videoMode} onChange={(e) => setVideoMode(e.target.value as "IMAGE_MOTION" | "VEO")}
-          className="mb-3 mt-2 block w-full rounded border border-hairline bg-surface-1 p-2">
-          <option value="IMAGE_MOTION">이미지에 움직임 적용 + 음성·자막</option>
-          <option value="VEO">Google Veo 장면 생성 + 음성·자막 (유료)</option>
-        </select>
-        {videoMode === "VEO" && <p className="mb-3 text-xs">장면별 생성 비용이 발생합니다. 현재 실제 비용·잔여 할당량을 자동 확인하지 못합니다.</p>}
+        <VideoGenerationChoice mode={videoMode} onMode={setVideoMode} plan={videoPlan} onPlan={setVideoPlan} />
         <label htmlFor="production-prompt" className="text-sm font-bold">제작 프롬프트 (선택)</label>
         <textarea id="production-prompt" rows={4} maxLength={12000}
           className="mt-2 w-full rounded-lg border border-hairline bg-transparent px-3 py-2"

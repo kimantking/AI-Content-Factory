@@ -144,17 +144,25 @@ def resume_campaign(campaign_id: str, db: Session = Depends(get_db)) -> Campaign
     if camp is None:
         raise HTTPException(404, "campaign not found")
     from app.celery_app import celery_app  # noqa: F401
-    from app.tasks import run_campaign_task
+    from app.tasks import run_campaign_task, run_media_task
 
-    args = [camp.id, camp.topic, camp.audience_goal, camp.platforms]
+    if camp.status not in {"FAILED", "CANCELLED"}:
+        raise HTTPException(409, "실패하거나 중지한 작업만 다시 시작할 수 있습니다.")
+    media = (camp.current_step or "").startswith("media:")
+    task = run_media_task if media else run_campaign_task
+    camp.status = "RUNNING"
+    camp.error_message = None
+    db.commit()
+
+    args = [camp.id, camp.platforms] if media else [camp.id, camp.topic, camp.audience_goal, camp.platforms]
     kw = {"resume": True}
     if get_settings().run_inline:
-        run_campaign_task.apply(args=args, kwargs=kw)
+        task.apply(args=args, kwargs=kw)
     else:
         try:
-            run_campaign_task.apply_async(args=args, kwargs=kw)
+            task.apply_async(args=args, kwargs=kw, queue="render" if media else "celery")
         except Exception:
-            run_campaign_task.apply(args=args, kwargs=kw)
+            task.apply(args=args, kwargs=kw)
     db.refresh(camp)
     return _summary(camp)
 
@@ -214,13 +222,18 @@ def cancel_campaign(campaign_id: str, db: Session = Depends(get_db)):
     # Persist first so a cooperative pipeline sees cancellation even if no worker
     # answers Celery inspect (for example while Docker is restarting).
     camp.status = "CANCELLED"
-    camp.current_step = "cancelled"
     camp.error_message = None
     db.query(AgentRun).filter_by(campaign_id=campaign_id, status="RUNNING").update(
         {AgentRun.status: "CANCELLED"}, synchronize_session=False
     )
     db.commit()
     revoked = _revoke_campaign_tasks(campaign_id)
+    # A worker can commit a previously loaded RUNNING row while the inspect /
+    # revoke request is in flight. Reassert cancellation after it has stopped.
+    db.refresh(camp)
+    camp.status = "CANCELLED"
+    camp.error_message = None
+    db.commit()
     return {"ok": True, "campaign_id": campaign_id, "status": "CANCELLED", "revoked_tasks": revoked}
 
 

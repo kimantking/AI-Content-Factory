@@ -10,7 +10,7 @@ from app.db.models import (
     Strategy,
     VerifiedFact,
 )
-from app.providers.errors import InvalidOutputError
+from app.providers.errors import InvalidOutputError, ProviderError
 
 
 def _extract_json_blob(text: str) -> str:
@@ -73,8 +73,13 @@ def parse_json(text: str, *, task: str) -> Any:
 def set_step(session, campaign_id: str, step: str, status: str = "RUNNING") -> None:
     camp = session.get(Campaign, campaign_id)
     if camp:
+        if camp.status == "CANCELLED":
+            raise ProviderError("작업이 중지되었습니다", "CANCELLED")
         camp.current_step = step
         camp.status = status
+        # Publish the active step before the slow provider call. A later
+        # rollback must not hide which step failed from the progress screen.
+        session.commit()
 
 
 def replace_sources(session, campaign_id: str, items) -> list[dict]:

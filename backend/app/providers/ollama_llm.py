@@ -195,6 +195,8 @@ class OllamaLLMProvider:
             parsed = json.loads(candidate)
         except ValueError:
             return None
+        if not isinstance(parsed, dict) or not parsed:
+            return None
         return json.dumps(parsed, ensure_ascii=False, separators=(",", ":"))
 
     def ping_inference(self) -> dict:

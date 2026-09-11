@@ -156,6 +156,7 @@ def test_google_image_health_is_read_only(google_on, monkeypatch):
 def test_google_video_submit_poll_complete(google_on, monkeypatch, tmp_path):
     from app.providers.media import google_video as gv
     _base = google_on
+    _base.google_video_model = "veo-3.0-generate-001"
     _base.google_video_poll_seconds = 0
     seq = [
         {"name": "models/veo/operations/op-1"},                         # submit
@@ -179,7 +180,7 @@ def test_google_video_operation_timeout_is_bounded(google_on, monkeypatch, tmp_p
     from app.providers.media import google_video as gv
     google_on.google_video_max_wait_seconds = 0        # deadline already passed after submit
     google_on.google_video_poll_seconds = 0
-    monkeypatch.setattr(gv, "http_json", lambda url, **kw: {"name": "op"} if url.endswith("Running?key=test-google-key")
+    monkeypatch.setattr(gv, "http_json", lambda url, **kw: {"name": "op"} if url.endswith("Running")
                         else {"done": False})
     monkeypatch.setattr(gv.time, "sleep", lambda *_: None)
     with pytest.raises(ProviderError) as ei:
@@ -234,3 +235,37 @@ def test_timeout_resumes_saved_operation_without_resubmitting(google_on, monkeyp
     provider._max_wait = 10
     provider.generate_video(**args)
     assert len(submits) == 1
+
+
+def test_veo31_resolution_cost_and_key_header(google_on, monkeypatch, tmp_path):
+    from app.providers.media import google_video as gv
+    google_on.google_video_model = "veo-3.1-generate-preview"
+    calls = []
+
+    def request(url, **kwargs):
+        calls.append((url, kwargs))
+        if kwargs.get("method") == "POST":
+            return {"name": "operations/quality-test"}
+        return {"done": True, "response": {"predictions": [
+            {"bytesBase64Encoded": base64.b64encode(b"test-video").decode()}]}}
+
+    monkeypatch.setattr(gv, "http_json", request)
+    result = gv.GoogleVideoProvider().generate_video(
+        prompt="Steam rises from tea", reference_image=None, duration=5,
+        width=1080, height=1920, camera_motion="", out_path=str(tmp_path / "quality.mp4"))
+    assert result.cost == 3.2 and result.meta["cost_state"] == "ESTIMATED"
+    assert result.duration == 8
+    assert calls[0][1]["body"]["parameters"] == {
+        "durationSeconds": 8, "aspectRatio": "9:16", "resolution": "1080p"}
+    assert all("key=" not in url for url, _ in calls)
+    assert all(kw["headers"]["x-goog-api-key"] == "test-google-key" for _, kw in calls)
+
+
+def test_missing_reference_does_not_submit_paid_generation(google_on, monkeypatch, tmp_path):
+    from app.providers.media import google_video as gv
+    def unexpected(*args, **kwargs):
+        pytest.fail("Must not submit a paid request without the reference image")
+    monkeypatch.setattr(gv, "http_json", unexpected)
+    with pytest.raises(ProviderError, match="reference image"):
+        gv.GoogleVideoProvider().generate_video(prompt="tea", reference_image=str(tmp_path / "missing.png"),
+            duration=8, width=1080, height=1920, camera_motion="", out_path=str(tmp_path / "out.mp4"))
