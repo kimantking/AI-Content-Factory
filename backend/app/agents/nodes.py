@@ -19,7 +19,7 @@ from app.db.base import session_scope
 from app.db.models import Campaign, Script
 from app.naturalness import load_voice_profile, natural_writing_pass, score_ai_slop
 from app.naturalness.cta import pick_cta
-from app.providers.errors import InsufficientResearchError
+from app.providers.errors import InsufficientResearchError, ProviderError
 from app.providers.registry import get_search_provider
 # LLM access goes through app.agents.model_gateway (AUDIT-P8-001) — no direct LLM provider here
 from app.providers.retry import call_with_retry
@@ -94,6 +94,8 @@ def create_campaign_node(state: PipelineState) -> dict:
         camp = session.get(Campaign, cid)
         if camp is None:
             raise ValueError(f"campaign {cid} not found")
+        if camp.status == "CANCELLED":
+            raise ProviderError("작업이 중지되었습니다", "CANCELLED")
         camp.status = "RUNNING"
         camp.current_step = "create_campaign"
         for name in _PROMPT_TASKS:

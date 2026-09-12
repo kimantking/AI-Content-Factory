@@ -14,7 +14,7 @@ export function Card({
   as?: "div" | "section" | "article";
 }) {
   return (
-    <Tag className={`card ${lift ? "card-2" : ""} ${className}`}>{children}</Tag>
+    <Tag className={`card min-w-0 ${lift ? "card-2" : ""} ${className}`}>{children}</Tag>
   );
 }
 

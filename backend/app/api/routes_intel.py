@@ -415,6 +415,14 @@ def create_preset(payload: dict = Body(...), db: Session = Depends(get_db)):
 #  one-screen compose (spec §A / §BC)
 # --------------------------------------------------------------------- #
 
+@router.get("/video-generation-options")
+def video_generation_options():
+    s = get_settings()
+    return {"media_budget": s.media_budget_usd, "campaign_budget": s.campaign_budget_usd,
+            "model": s.google_video_model,
+            "cost_per_scene": 3.2 if s.google_video_model.removeprefix("models/") == "veo-3.1-generate-preview" else None}
+
+
 @router.post("/campaigns/compose", status_code=201)
 def compose_campaign(payload: dict = Body(...), db: Session = Depends(get_db)):
     s = get_settings()
@@ -424,6 +432,10 @@ def compose_campaign(payload: dict = Body(...), db: Session = Depends(get_db)):
     video_mode = payload.get("video_mode", "IMAGE_MOTION")
     if video_mode not in ("IMAGE_MOTION", "VEO"):
         raise HTTPException(400, "영상 제작 방식이 올바르지 않습니다.")
+    video_plan = payload.get("video_plan") if video_mode == "VEO" else None
+    from app.services.video_plan import PLANS
+    if video_plan is not None and (not isinstance(video_plan, str) or video_plan not in PLANS):
+        raise HTTPException(400, "Veo 생성 범위가 올바르지 않습니다.")
     if not isinstance(production_prompt, str) or len(production_prompt) > 12000:
         raise HTTPException(400, "제작 프롬프트는 12,000자 이하의 텍스트여야 합니다.")
     urls = payload.get("reference_urls") or []
@@ -440,7 +452,7 @@ def compose_campaign(payload: dict = Body(...), db: Session = Depends(get_db)):
         from app.providers.errors import ProviderError
 
         camp = Campaign(topic=topic, production_prompt=production_prompt.strip(),
-                        video_mode=video_mode,
+                        video_mode=video_mode, video_plan=video_plan,
                         audience_goal=(payload.get("audience_goal") or "BALANCED").upper(),
                         platforms=[], status="WAITING", workspace_id=ws, brand_id=br, channel_id=ch,
                         execution_mode=mode.value)
@@ -455,6 +467,12 @@ def compose_campaign(payload: dict = Body(...), db: Session = Depends(get_db)):
         from app.platforms import ContentFamily, get_platform
 
         if any(get_platform(p).family == ContentFamily.VIDEO for p in camp.platforms):
+            if video_plan and s.google_video_model.removeprefix("models/") == "veo-3.1-generate-preview":
+                from app.services.budget import check_media_budget, BudgetExceeded
+                try:
+                    check_media_budget(db, campaign_id, pending_usd=PLANS[video_plan][0] * 3.2)
+                except BudgetExceeded as exc:
+                    raise HTTPException(400, "선택한 Veo 생성량이 현재 예산 한도를 초과합니다. 이미지 모션을 선택하거나 예산 설정을 확인하세요.") from exc
             try:
                 validate_media_setup(ws, video_mode, verify_remote=True)
             except ProviderError as exc:

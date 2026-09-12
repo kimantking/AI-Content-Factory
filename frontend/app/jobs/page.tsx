@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { cancelCampaign, deleteCampaign, listCampaigns, type CampaignSummary } from "@/lib/api";
+import { cancelCampaign, deleteCampaign, resumeCampaign, listCampaigns, type CampaignSummary } from "@/lib/api";
 import { Card, CardBody, EmptyState, ErrorState, PageHeader } from "@/components/ui/primitives";
 import { Icon } from "@/components/ui/Icon";
 import { StatusBadge } from "@/components/ui/StatusBadge";
@@ -21,9 +21,10 @@ function progress(job: CampaignSummary) {
   return Math.min(95, Math.round(((idx + (job.status === "RUNNING" ? 0.5 : 0)) / STEPS.length) * 100));
 }
 
-function JobCard({ job, busy, onCancel, onDelete }: {
+function JobCard({ job, busy, onCancel, onDelete, onResume }: {
   job: CampaignSummary; busy: boolean;
   onCancel: (job: CampaignSummary) => void; onDelete: (job: CampaignSummary) => void;
+  onResume: (job: CampaignSummary) => void;
 }) {
   const pct = progress(job);
   const active = job.status === "RUNNING" || job.status === "WAITING";
@@ -57,6 +58,9 @@ function JobCard({ job, busy, onCancel, onDelete }: {
           </Link>
           {active && <button className="btn btn-secondary justify-center" disabled={busy} onClick={() => onCancel(job)}>
             {busy ? "처리 중…" : "작업 중지"}
+          </button>}
+          {["FAILED", "CANCELLED"].includes(job.status) && <button className="btn btn-secondary col-span-2 justify-center" disabled={busy} onClick={() => onResume(job)}>
+            {busy ? "처리 중…" : "작업 다시 시작"}
           </button>}
           <button className={`btn btn-secondary justify-center text-danger ${active ? "" : "col-span-2"}`} disabled={busy} onClick={() => onDelete(job)}>
             {busy ? "처리 중…" : "완전히 삭제"}
@@ -95,6 +99,11 @@ export default function JobsPage() {
     try { await deleteCampaign(job.id); await load(); } catch (e) { setError(String(e)); }
     finally { setBusyId(null); }
   };
+  const restart = async (job: CampaignSummary) => {
+    setBusyId(job.id); setError(null);
+    try { await resumeCampaign(job.id); load(); } catch (e) { setError(String(e)); }
+    finally { setBusyId(null); }
+  };
 
   return (
     <div className="space-y-5">
@@ -106,7 +115,7 @@ export default function JobsPage() {
       ) : visible.length === 0 ? (
         <EmptyState icon="activity" title={showAll ? "최근 작업이 없습니다" : "진행 중인 작업이 없습니다"} body="새 콘텐츠를 만들거나 최근 작업 전체를 확인하세요." action={<Link href="/create" className="btn btn-primary">콘텐츠 만들기</Link>} />
       ) : (
-        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{visible.map((job) => <JobCard key={job.id} job={job} busy={busyId === job.id} onCancel={stop} onDelete={remove} />)}</div>
+        <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">{visible.map((job) => <JobCard key={job.id} job={job} busy={busyId === job.id} onCancel={stop} onDelete={remove} onResume={restart} />)}</div>
       )}
     </div>
   );

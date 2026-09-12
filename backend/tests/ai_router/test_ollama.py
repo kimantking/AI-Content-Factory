@@ -38,6 +38,29 @@ def test_complete_raises_normalized_error_when_down():
         p.complete(system="s", user="u", task="t", context={})
 
 
+@pytest.mark.parametrize("empty", ["{}", "[]", "null"])
+def test_empty_structured_output_is_regenerated(monkeypatch, empty):
+    p = OllamaLLMProvider()
+    responses = iter([empty, '{"angle":"창가의 차"}'])
+    calls = []
+
+    def request(path, payload):
+        calls.append(payload)
+        return {"message": {"content": next(responses)}}
+
+    monkeypatch.setattr(p, "_request", request)
+    result = p.complete(system="Return a strategy", user="차", task="strategy", context={})
+    assert json.loads(result.text)["angle"] == "창가의 차"
+    assert len(calls) == 2
+
+
+def test_repeated_empty_output_is_rejected(monkeypatch):
+    p = OllamaLLMProvider()
+    monkeypatch.setattr(p, "_request", lambda *args: {"message": {"content": "{}"}})
+    with pytest.raises(ProviderError):
+        p.complete(system="s", user="u", task="strategy", context={})
+
+
 @ollama_available
 def test_health_lists_models_locally():
     p = OllamaLLMProvider(base_url=_OLLAMA)

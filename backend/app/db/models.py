@@ -34,6 +34,7 @@ class Campaign(Base):
     topic: Mapped[str] = mapped_column(Text, nullable=False)
     production_prompt: Mapped[str | None] = mapped_column(Text, nullable=True)
     video_mode: Mapped[str | None] = mapped_column(String(20), nullable=True)
+    video_plan: Mapped[str | None] = mapped_column(String(20), nullable=True)
     audience_goal: Mapped[str] = mapped_column(String(32), default="BALANCED")
     platforms: Mapped[list] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(16), default="WAITING", index=True)

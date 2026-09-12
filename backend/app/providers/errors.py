@@ -33,7 +33,7 @@ class InsufficientResearchError(ProviderError):
 
 
 # Errors that must NOT be retried (retry would be meaningless).
-NON_RETRYABLE = {"AUTH_ERROR", "BUDGET_EXCEEDED"}
+NON_RETRYABLE = {"AUTH_ERROR", "BUDGET_EXCEEDED", "CANCELLED"}
 
 RETRY_TAXONOMY = {
     "TIMEOUT",

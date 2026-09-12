@@ -47,7 +47,7 @@ def run_pipeline(
     with _checkpointer() as cp:
         graph = build_graph(checkpointer=cp)
         cfg = _config(campaign_id)
-        if resume:
+        if resume and graph.get_state(cfg).next:
             return graph.invoke(None, cfg)
         state = initial_state(campaign_id, topic, audience_goal, platforms or [])
         return graph.invoke(state, cfg)

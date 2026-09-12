@@ -41,21 +41,29 @@ class GoogleVideoProvider:
         if not self._key:
             raise provider_error("google", "NOT_CONFIGURED", "GOOGLE_API_KEY is not set")
 
+    def estimated_cost(self) -> float:
+        # Published Gemini API Veo 3.1 Standard price: $0.40/second.
+        # Keep unknown models explicitly unknown rather than inventing a rate.
+        return 3.2 if self._model == "veo-3.1-generate-preview" else 0.0
+
     def generate_video(self, *, prompt: str, reference_image: str | None, duration: float,
                        width: int, height: int, camera_motion: str, out_path: str) -> MediaResult:
-        submit = f"{self._base}/v1beta/models/{self._model}:predictLongRunning?key={self._key}"
+        submit = f"{self._base}/v1beta/models/{self._model}:predictLongRunning"
+        headers = {"x-goog-api-key": self._key}
         instance: dict = {"prompt": prompt}
         if reference_image:
             try:
                 with open(reference_image, "rb") as f:
                     instance["image"] = {"bytesBase64Encoded": base64.b64encode(f.read()).decode(),
                                          "mimeType": "image/png"}
-            except OSError:
-                pass
+            except OSError as exc:
+                raise provider_error("google", "PROVIDER_ERROR", "reference image could not be read") from exc
         params = {"aspectRatio": "16:9" if width >= height else "9:16"}
         # Scene timing is normalized by our renderer. Veo 3 clips use supported
         # eight-second generation rather than arbitrary narration durations.
         params["durationSeconds"] = 8
+        if self._model.startswith("veo-3.1"):
+            params["resolution"] = "1080p" if min(width, height) >= 1080 else "720p"
         payload = {"instances": [instance], "parameters": params}
         fingerprint = hashlib.sha256(json.dumps({"model": self._model, "payload": payload},
                                                 sort_keys=True).encode()).hexdigest()
@@ -63,7 +71,7 @@ class GoogleVideoProvider:
         saved = json.loads(checkpoint.read_text()) if checkpoint.is_file() else {}
         op_name = saved.get("name") if saved.get("fingerprint") == fingerprint else None
         if not op_name:
-            op = http_json(submit, method="POST", body=payload,
+            op = http_json(submit, method="POST", body=payload, headers=headers,
                            timeout=self._timeout, vendor="google")
             op_name = op.get("name")
             if op_name:
@@ -77,7 +85,7 @@ class GoogleVideoProvider:
         deadline = time.monotonic() + self._max_wait
         result = None
         while time.monotonic() < deadline:
-            st = http_json(f"{self._base}/v1beta/{op_name}?key={self._key}",
+            st = http_json(f"{self._base}/v1beta/{op_name}", headers=headers,
                            timeout=self._timeout, vendor="google")
             if st.get("error"):
                 raise provider_error("google", "PROVIDER_ERROR",
@@ -95,8 +103,9 @@ class GoogleVideoProvider:
             f.write(vid_bytes)
         return MediaResult(
             path=out_path, mime_type="video/mp4", provider=self.name, provider_mode=self.mode,
-            width=width, height=height, duration=duration, cost=0.0,
-            meta={"model": self._model, "operation": op_name, "cost_state": "UNKNOWN",
+            width=width, height=height, duration=8.0, cost=self.estimated_cost(),
+            meta={"model": self._model, "operation": op_name,
+                  "cost_state": "ESTIMATED" if self.estimated_cost() else "UNKNOWN",
                   "bytes": len(vid_bytes), "prompt": prompt[:400]},
         )
 
@@ -118,7 +127,7 @@ class GoogleVideoProvider:
 
     def health(self) -> dict:
         try:
-            data = http_json(f"{self._base}/v1beta/models?key={self._key}",
+            data = http_json(f"{self._base}/v1beta/models", headers={"x-goog-api-key": self._key},
                              timeout=self._timeout, vendor="google")
             return {"status": "CONNECTED", "models_visible": len(data.get("models") or []),
                     "video_model": self._model}

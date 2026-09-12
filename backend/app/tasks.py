@@ -44,6 +44,8 @@ def _mark_failed(campaign_id: str, exc: Exception) -> None:
     with session_scope() as session:
         camp = session.get(Campaign, campaign_id)
         etype = getattr(exc, "error_type", type(exc).__name__)
+        if camp is None or camp.status == "CANCELLED":
+            return
         if camp:
             camp.status = "FAILED"
             camp.error_message = f"{etype}: {exc}"[:2000]
@@ -56,7 +58,8 @@ def run_campaign_task(self, campaign_id: str, topic: str,
                       audience_goal: str = "BALANCED", platforms: list[str] | None = None,
                       resume: bool = False):
     try:
-        state = run_pipeline(campaign_id, topic, audience_goal, platforms, resume=resume)
+        state = run_pipeline(campaign_id, topic, audience_goal, platforms,
+                             resume=resume or self.request.retries > 0)
         media_started = _enqueue_media_after_text(campaign_id, platforms)
         return {
             "campaign_id": campaign_id,

@@ -122,6 +122,12 @@ export async function cancelCampaign(id: string): Promise<{ ok: boolean; status:
   return r.json();
 }
 
+export async function resumeCampaign(id: string): Promise<CampaignSummary> {
+  const res = await fetch(`${API_BASE}/api/campaigns/${id}/resume`, { method: "POST" });
+  if (!res.ok) throw new Error(await res.text());
+  return res.json();
+}
+
 export async function deleteCampaign(id: string): Promise<{ ok: boolean; deleted_records: number }> {
   const r = await fetch(`${API_BASE}/api/campaigns/${id}`, { method: "DELETE" });
   if (!r.ok) throw new Error(`작업 삭제 실패 (${r.status})`);
@@ -901,7 +907,7 @@ export const getPlatformSelection = (campaignId: string): Promise<{ campaign_id:
 export const setPlatformSelection = (body: { campaign_id: string; selection?: PlatformSelection; preset?: string }) =>
   jpost("/api/platform-selection", body);
 export const composeCampaign = (body: {
-  topic?: string; production_prompt?: string; video_mode?: "IMAGE_MOTION" | "VEO"; execution_mode: string; reference_urls?: string[];
+  topic?: string; production_prompt?: string; video_mode?: "IMAGE_MOTION" | "VEO"; video_plan?: "PREVIEW" | "THREE_SCENES"; execution_mode: string; reference_urls?: string[];
   platform_selection?: PlatformSelection; preset?: string; workspace_id?: string; audience_goal?: string;
 }): Promise<{ execution_mode: string; campaign_id: string | null; pipeline_started: boolean; generate_platforms: string[]; learning: Record<string, unknown> }> =>
   jpost("/api/campaigns/compose", body);

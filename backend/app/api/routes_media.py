@@ -95,7 +95,7 @@ def media_status(campaign_id: str, db: Session = Depends(get_db)):
     progress = [
         {"name": s.split(":", 1)[1], "status": (
             "SUCCESS" if (camp.status == "SUCCESS" and step == "media:done") or _ORDER[s] < done
-            else "RUNNING" if _ORDER[s] == done
+            else (camp.status if camp.status in ("FAILED", "CANCELLED") else "RUNNING") if _ORDER[s] == done
             else "WAITING")}
         for s in MEDIA_STEPS
     ]
@@ -116,10 +116,15 @@ def media_status(campaign_id: str, db: Session = Depends(get_db)):
 
     def scene_row(sc: Scene) -> dict:
         img = next((a for a in assets if a.scene_id == sc.id and a.asset_type == "image"), None)
+        video = next((a for a in assets if a.scene_id == sc.id and a.asset_type == "video"), None)
+        status = sc.generation_status
+        if sc.visual_type == "AI_VIDEO":
+            status = "SUCCESS" if video else (
+                camp.status if camp.status in ("FAILED", "CANCELLED") else "PENDING")
         return {
             "scene_id": sc.id, "order": sc.scene_order, "narration": sc.narration,
             "duration": round(sc.estimated_duration, 2), "visual_type": sc.visual_type,
-            "camera_motion": sc.camera_motion, "status": sc.generation_status,
+            "camera_motion": sc.camera_motion, "status": status,
             "provider": sc.generation_provider,
             "still": _rel(img.storage_path) if img else None,
         }

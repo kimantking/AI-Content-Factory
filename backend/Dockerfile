@@ -6,7 +6,7 @@ WORKDIR /app
 
 # build deps only in the build stage; runtime keeps libpq + postgres-client (pg_dump/pg_restore)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-      build-essential libpq-dev postgresql-client ffmpeg \
+      build-essential libpq-dev postgresql-client ffmpeg fonts-nanum \
     && rm -rf /var/lib/apt/lists/*
 
 COPY requirements.txt .

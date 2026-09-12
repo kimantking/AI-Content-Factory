@@ -47,7 +47,7 @@ from app.providers.media import (
 )
 from app.providers.media.cache import AssetCache, asset_hash
 # LLM access goes through app.agents.model_gateway (AUDIT-P8-001) — no direct provider here
-from app.schemas.media import ChartSpec, VisualType
+from app.schemas.media import ChartSpec, ProviderMode, VisualType
 from app.services.budget import check_media_budget
 from app.services.cost import log_cost
 from app.services.prompts import load_prompt, register_prompt
@@ -647,15 +647,37 @@ def gen_videos_node(state: MediaState) -> dict:
             if existing:
                 updated.append({**sc, "video_path": existing.storage_path})
                 continue
+            from app.services.video_plan import allowance
+            from app.services.budget import BudgetExceeded, _sum
+            from app.db.models import CostLog
+
+            max_scenes, video_limit = allowance(session.get(Campaign, cid))
+            if max_scenes:
+                generated = session.query(Asset).filter_by(campaign_id=cid, asset_type="video").count()
+                if generated >= max_scenes:
+                    session.get(Scene, sc["id"]).visual_type = VisualType.AI_IMAGE
+                    updated.append({**sc, "visual_type": VisualType.AI_IMAGE, "video_path": None})
+                    continue
             session.get(Campaign, cid).current_step = "media:videos"
             session.commit()
-            check_media_budget(session, cid, pending_usd=0.0)
             provider = provider or get_video_provider()
             if provider is None:
                 raise ProviderError("AI_VIDEO 장면에 영상 공급자가 없습니다", "AUTH_ERROR")
+            estimate = getattr(provider, "estimated_cost", lambda: 0.0)()
+            if max_scenes:
+                if getattr(provider, "mode", None) == ProviderMode.REAL and estimate <= 0:
+                    raise ProviderError("영상 단가를 확인할 수 없어 선택한 예산 한도를 보장할 수 없습니다", "INVALID_OUTPUT")
+                spent = _sum(session, CostLog.campaign_id == cid, CostLog.kind == "VIDEO")
+                if spent + estimate > video_limit:
+                    raise BudgetExceeded("video", spent + estimate, video_limit)
+            check_media_budget(session, cid, pending_usd=estimate)
             w, h = spec.resolution()
             folder = get_storage().campaign_dir(cid, spec.storage_dir, "videos")
             path = os.path.join(folder, f"scene_{sc['scene_order']:03d}.mp4")
+            # Budget/asset reads start a transaction. Veo can take several minutes;
+            # release it before polling so PostgreSQL's idle transaction timeout
+            # cannot kill the connection before we persist the completed clip.
+            session.commit()
             result = provider.generate_video(
                 prompt=_prompt_text(sc), reference_image=sc.get("still_path"),
                 duration=sc["estimated_duration"], width=w, height=h,
@@ -689,6 +711,8 @@ def render_node(state: MediaState) -> dict:
         stg = get_storage()
         render_dir = stg.campaign_dir(cid, spec.storage_dir, "render")
         clips_dir = stg.campaign_dir(cid, spec.storage_dir, "render", "clips")
+        music_style, subtitle_style = content.music_style, content.subtitle_style
+        session.commit()
 
         render_scenes: list[RenderScene] = []
         for sc in scenes:
@@ -711,14 +735,15 @@ def render_node(state: MediaState) -> dict:
         total = sum(sc["estimated_duration"] for sc in scenes)
         bgm_path = os.path.join(render_dir, "bgm.wav")
         music = get_music_provider()
-        mres = music.get_track(mood=content.music_style or "AMBIENT", duration=total + 1, out_path=bgm_path)
+        mres = music.get_track(mood=music_style or "AMBIENT", duration=total + 1, out_path=bgm_path)
         log_cost(session, campaign_id=cid, agent_name="Music", kind="MUSIC",
                  provider=mres.provider, amount_usd=mres.cost)
         session.query(Asset).filter_by(content_id=content_id, asset_type="music").delete()
         session.flush()
         _record_asset(session, cid=cid, content_id=content_id, scene_id=None, asset_type="music",
-                      provider=mres.provider, mode=mres.provider_mode.value, prompt=content.music_style,
+                      provider=mres.provider, mode=mres.provider_mode.value, prompt=music_style,
                       path=bgm_path, mime="audio/wav", duration=mres.duration, meta=mres.meta)
+        session.commit()
 
         # subtitle overlays
         from app.schemas.media import SubtitleBlock
@@ -726,7 +751,7 @@ def render_node(state: MediaState) -> dict:
         blocks = [SubtitleBlock(**b) for b in state.get("subtitle_blocks", [])]
         overlays = render_overlays(blocks, width=w, height=h,
                                    out_dir=os.path.join(render_dir, "sub"),
-                                   style=content.subtitle_style)
+                                   style=subtitle_style)
 
         avg_ed = {}
         for sc in scenes:
